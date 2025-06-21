@@ -44,4 +44,13 @@ public:
 
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
+	void GreedyMeshDirection(int D, int U, int V, FVector Normal, FVector Right, FVector Up,
+	                         const TFunction<EVoxelType(int32, int32, int32)>& GetVoxel);
+private:
+	TArray<FVector> Vertices;
+	TArray<int32> Triangles;
+	TArray<FVector> Normals;
+	TArray<FVector2D> UVs;
+	TArray<FLinearColor> VertexColors;
+	TArray<FProcMeshTangent> Tangents;
 };
