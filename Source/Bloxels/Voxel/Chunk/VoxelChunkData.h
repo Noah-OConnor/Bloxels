@@ -19,15 +19,13 @@ struct FVoxelChunkData
 
 	// Size info (cached from config for safety)
 	int32 ChunkSize = 16;
-	int32 ChunkHeight = 16;
 
-	void Initialize(int32 InChunkSize, int32 InChunkHeight, FIntVector InCoords)
+	void Initialize(int32 InChunkSize, FIntVector InCoords)
 	{
 		ChunkCoords = InCoords;
 		ChunkSize = InChunkSize;
-		ChunkHeight = InChunkHeight;
 
-		Voxels.SetNum(ChunkSize * ChunkSize * ChunkHeight);
+		Voxels.SetNum(ChunkSize * ChunkSize * ChunkSize);
 	}
 
 	FORCEINLINE int32 GetIndex(int32 X, int32 Y, int32 Z) const
@@ -39,7 +37,7 @@ struct FVoxelChunkData
 	{
 		return X >= 0 && X < ChunkSize &&
 			   Y >= 0 && Y < ChunkSize &&
-			   Z >= 0 && Z < ChunkHeight;
+			   Z >= 0 && Z < ChunkSize;
 	}
 
 	FORCEINLINE EVoxelType GetVoxel(int32 X, int32 Y, int32 Z) const
