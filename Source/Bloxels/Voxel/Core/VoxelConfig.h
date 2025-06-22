@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "VoxelInfo.h"
 #include "VoxelConfig.generated.h"
 
 UCLASS(BlueprintType, Blueprintable)
@@ -16,4 +17,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Voxel Settings")
 	float VoxelSize = 100.0f; // 100 = 1m blocks
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Voxel Settings")
+	TMap<EVoxelType, FVoxelInfo> VoxelProperties;
+
 };

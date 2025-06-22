@@ -3,13 +3,17 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "VoxelChunkData.h"
 #include "GameFramework/Actor.h"
 #include "ProceduralMeshComponent.h"
+#include "Bloxels/Voxel/Core/MeshData.h"
+#include "Bloxels/Voxel/Core/MeshSectionKey.h"
+#include "Bloxels/Voxel/World/VoxelWorld.h"
 #include "VoxelChunk.generated.h"
 
 
 class UVoxelConfig;
+
+DECLARE_EVENT(AVoxelChunk, FOnChunkDataGenerated)
 
 UCLASS()
 class BLOXELS_API AVoxelChunk : public AActor
@@ -18,39 +22,47 @@ class BLOXELS_API AVoxelChunk : public AActor
 
 public:
 	AVoxelChunk();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Voxel|Mesh")
+	
+	UPROPERTY(VisibleAnywhere)
 	UProceduralMeshComponent* MeshComponent;
+	UPROPERTY(VisibleAnywhere)
+	AVoxelWorld* VoxelWorld = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Mesh")
-	UMaterial* Material;
+	void InitializeChunk(AVoxelWorld* InVoxelWorld, int32 ChunkX, int32 ChunkY, bool bShouldGenMesh);
 
-	/** The chunk's grid location in world space (in chunk units, not voxels) */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Voxel|Chunk")
-	FIntVector ChunkCoords;
+	void GenerateChunkDataAsync();
 
-	/** Raw voxel data for this chunk */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Voxel|Chunk")
-	FVoxelChunkData ChunkData;
+	void OnChunkDataGenerated(TArray<uint16> VoxelData);
 
-	/** Reference to the config instance (injected by the world) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Chunk")
-	UVoxelConfig* Config;
+	void TryGenerateChunkMesh();
 
-	/** Initializes the chunk with a location and voxel config */
-	void Initialize(FIntVector InCoords, UVoxelConfig* InConfig);
+	void GenerateChunkMeshAsync();
 
-	void GenerateMesh();
+	void OnMeshGenerated(const TMap<FMeshSectionKey, FMeshData> InMeshSections);
+	
+	void DisplayMesh();
 
-protected:
-	virtual void OnConstruction(const FTransform& Transform) override;
-	void GreedyMeshDirection(int D, int U, int V, FVector Normal, FVector Right, FVector Up,
-	                         const TFunction<EVoxelType(int32, int32, int32)>& GetVoxel);
+	void UnloadChunk();
+
+	bool IsVoxelInChunk(int X, int Y, int Z);
+
+	bool CheckVoxel(int X, int Y, int Z, FIntPoint ChunkCoord);
+
+	void SetChunkCoords(FIntPoint InCoords);
+
+	//UPROPERTY(VisibleAnywhere)
+	TArray<uint16> VoxelData; // Voxel Storage
+	TMap<FMeshSectionKey, FMeshData> MeshSections;
+	UPROPERTY(VisibleAnywhere)
+	FIntPoint ChunkCoords = FIntPoint(-MAX_int32, -MAX_int32);
+
+	// BOOLS
+	bool bGenerateMesh = false;
+	bool bHasData = false;
+	bool bHasMeshSections = false;
+
+	FOnChunkDataGenerated& OnChunkDataGenerated() { return ChunkDataGeneratedEvent; }
+	
 private:
-	TArray<FVector> Vertices;
-	TArray<int32> Triangles;
-	TArray<FVector> Normals;
-	TArray<FVector2D> UVs;
-	TArray<FLinearColor> VertexColors;
-	TArray<FProcMeshTangent> Tangents;
+	FOnChunkDataGenerated ChunkDataGeneratedEvent;
 };

@@ -4,42 +4,98 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "FastNoiseWrapper.h"
+#include "Biome/Biome.h"
+#include "Biome/NoiseInfo.h"
+#include "Bloxels/Voxel/Core/VoxelInfo.h"
+#include "Engine/TriggerVolume.h"
 #include "VoxelWorld.generated.h"
 
 class AVoxelChunk;
 class UVoxelConfig;
+struct FBiomeProperties;
 
 UCLASS()
 class BLOXELS_API AVoxelWorld : public AActor
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	AVoxelWorld();
+    AVoxelWorld();
 
 protected:
-	virtual void BeginPlay() override;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel")
+    UDataTable* VoxelDataTable;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel")
+    UDataTable* BiomeDataTable;
+
+    virtual void BeginPlay() override;
 
 public:
-	/** The config asset to drive world generation */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Voxel Settings")
-	UVoxelConfig* VoxelConfig;
+    void TryCreateNewChunk(int32 ChunkX, int32 ChunkY, bool bShouldGenMesh);
 
-	/** The chunk blueprint or class to spawn */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Voxel Settings")
-	TSubclassOf<AVoxelChunk> ChunkClass;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "World Generation")
+    int WorldSize = 2;  // How many chunks in X and Y directions
 
-	/** The number of chunks to load outward from the center (X/Y/Z) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|World Generation")
-	int32 LoadRadius = 2;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "World Generation")
+    float VoxelSize = 100.0f; // 100 is 1 meter which is what minecraft uses
 
-	/** Map of world chunk coords to their actor instances */
-	UPROPERTY()
-	TMap<FIntVector, AVoxelChunk*> Chunks;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "World Generation")
+    int32 ChunkSize = 16;
 
-	/** Spawns all chunks in a cubic grid around the player */
-	void GenerateInitialChunks();
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "World Generation")
+    int32 ChunkHeight = 32;
 
-	/** Helper to spawn a single chunk at ChunkCoords if not already loaded */
-	void SpawnChunkAt(FIntVector ChunkCoords);
+    // Biome Noise Settings
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Biome Noise Settings")
+    FNoiseInfo Temperature;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Biome Noise Settings")
+    FNoiseInfo Habitability;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Biome Noise Settings")
+    FNoiseInfo Elevation;
+
+    UPROPERTY()
+    UFastNoiseWrapper* TemperatureNoise;
+    UPROPERTY()
+    UFastNoiseWrapper* HabitabilityNoise;
+    UPROPERTY()
+    UFastNoiseWrapper* ElevationNoise;
+
+    APawn* PlayerPawn;
+    FIntPoint CurrentChunk = 0;
+    FIntPoint PreviousChunk = 0;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    ATriggerVolume* ChunkTriggerVolume = nullptr;
+
+    mutable FRWLock ChunksLock;
+    UPROPERTY(VisibleAnywhere)
+    TMap<FIntPoint, AVoxelChunk*> Chunks; // Store All chunks in a map
+    mutable FRWLock ActiveChunksLock;
+    UPROPERTY(VisibleAnywhere)
+    TMap<FIntPoint, AVoxelChunk*> ActiveChunks; // Store Active chunks in a map
+    static FVoxelInfo VoxelProperties[UINT16_MAX];
+
+    bool bIsShuttingDown = false;
+
+    //UPROPERTY(EditDefaultsOnly, Category = "Materials")
+    //UMaterialInterface* BaseBlockMaterial;
+
+    int16 GetVoxelAtWorldCoordinates(int X, int Y, int Z);
+    void InitializeTriggerVolume();
+    void InitializeVoxelProperties();
+    void InitializeNoiseLayers();
+    void GenerateInitialWorld();
+    void InitializePlayer();
+    EBiome GetBiome(int X, int Y);
+    int GetTerrainHeight(int X, int Y, EBiome Biome);
+    const FBiomeProperties* GetBiomeData(EBiome Biome) const;
+    void UpdateTriggerVolume(FVector PlayerPosition);
+    UFUNCTION()
+    void OnChunkExit(AActor* OverlappedActor, AActor* OtherActor);
+    void UpdateChunks();
+
+    UFUNCTION(BlueprintCallable, Category = "Voxel")
+    int PlaceBlock(int X, int Y, int Z, int blockToPlace);
 };

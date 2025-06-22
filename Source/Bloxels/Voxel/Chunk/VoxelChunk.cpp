@@ -2,220 +2,280 @@
 
 
 #include "VoxelChunk.h"
-#include "Bloxels/Voxel/Core/VoxelConfig.h"
-#include "Bloxels/Voxel/Core/VoxelUtilities.h"
+
+#include "VoxelGenerationTask.h"
+#include "VoxelMeshTask.h"
 
 
 AVoxelChunk::AVoxelChunk()
 {
 	PrimaryActorTick.bCanEverTick = false;
-
-	MeshComponent = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("Chunk Mesh"));
-	SetActorEnableCollision(false);
-	SetActorTickEnabled(false);
+	MeshComponent = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("MeshComponent"));
+	RootComponent = MeshComponent;
 }
 
-void AVoxelChunk::Initialize(FIntVector InCoords, UVoxelConfig* InConfig)
+void AVoxelChunk::InitializeChunk(AVoxelWorld* InVoxelWorld, int32 ChunkX, int32 ChunkY, bool bShouldGenMesh)
 {
-	ChunkCoords = InCoords;
-	Config = InConfig;
+	VoxelWorld = InVoxelWorld;
+	ChunkCoords = FIntPoint(ChunkX, ChunkY);
+	bGenerateMesh = bShouldGenMesh;
 
-	ChunkData.Initialize(Config->ChunkSize, InCoords);
+	// Initialize Voxel Data Size ***THIS SHOULD NOT CHANGE ANYWHERE AFTER ITS SET***
+	VoxelData.SetNum(VoxelWorld->ChunkSize * VoxelWorld->ChunkSize * VoxelWorld->ChunkHeight);
 
-	// TEMP: Fill the lower half with stone, upper half with air
-	for (int32 X = 0; X < Config->ChunkSize; X++)
+	GenerateChunkDataAsync();
+}
+
+void AVoxelChunk::GenerateChunkDataAsync()
+{
+	TWeakObjectPtr<AVoxelChunk> WeakThis(this);
+	TWeakObjectPtr<AVoxelWorld> WeakWorld(VoxelWorld);
+	const auto AsyncTraceTask = new FAutoDeleteAsyncTask<FVoxelGenerationTask>(ChunkCoords.X, ChunkCoords.Y, WeakWorld, WeakThis);
+	AsyncTraceTask->StartBackgroundTask();
+}
+
+void AVoxelChunk::OnChunkDataGenerated(TArray<uint16> InVoxelData)
+{
+	TWeakObjectPtr<AVoxelChunk> WeakThis(this);
+	AsyncTask(ENamedThreads::GameThread, [InVoxelData = MoveTemp(InVoxelData), WeakThis]()
 	{
-		for (int32 Y = 0; Y < Config->ChunkSize; Y++)
+		if (!WeakThis.IsValid())  // Check if AVoxelWorld is still valid before proceeding
 		{
-			for (int32 Z = 0; Z < Config->ChunkSize; Z++)
-			{
-				EVoxelType VoxelType = EVoxelType::Stone; //(Z < Config->ChunkSize / 2) ? EVoxelType::Stone : EVoxelType::Air;
-				ChunkData.SetVoxel(X, Y, Z, VoxelType);
-				GenerateMesh();
-			}
+			UE_LOG(LogTemp, Error, TEXT("VoxelChunk is no longer valid!"));
+			return;
 		}
-	}
-	
-	FVector WorldPos = VoxelUtils::ChunkToWorldLocation(ChunkCoords, Config->VoxelSize, Config->ChunkSize);
-	SetActorLocation(WorldPos);
-}
 
-void AVoxelChunk::GenerateMesh()
-{
-	const int32 Size = Config->ChunkSize;
-	const float VoxelSize = Config->VoxelSize;
-
-	MeshComponent->ClearAllMeshSections();
-	Vertices.Reset();
-	Triangles.Reset();
-	Normals.Reset();
-	UVs.Reset();
-	VertexColors.Reset();
-	Tangents.Reset();
-
-	auto GetVoxel = [&](int32 X, int32 Y, int32 Z) -> EVoxelType {
-		return ChunkData.GetVoxel(X, Y, Z);
-	};
-
-	// Greedy sweep along each of the 3 axes
-	GreedyMeshDirection(0, 1, 2, FVector(1,0,0), FVector(0,1,0), FVector(0,0,1), GetVoxel); // X+
-	GreedyMeshDirection(0, 1, 2, FVector(-1,0,0), FVector(0,1,0), FVector(0,0,1), GetVoxel); // X+
-	GreedyMeshDirection(1, 0, 2, FVector(0,1,0), FVector(1,0,0), FVector(0,0,1), GetVoxel); // Y+
-	GreedyMeshDirection(1, 0, 2, FVector(0,-1,0), FVector(1,0,0), FVector(0,0,1), GetVoxel); // Y+
-	GreedyMeshDirection(2, 0, 1, FVector(0,0,1), FVector(1,0,0), FVector(0,1,0), GetVoxel); // Z+
-	GreedyMeshDirection(2, 0, 1, FVector(0,0,-1), FVector(1,0,0), FVector(0,1,0), GetVoxel); // Z+
-
-	MeshComponent->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UVs, VertexColors, Tangents, true);
-	if (Material)
-	{
-		MeshComponent->SetMaterial(0, Material);
-	}
-}
-
-
-void AVoxelChunk::OnConstruction(const FTransform& Transform)
-{
-	Super::OnConstruction(Transform);
-}
-
-void AVoxelChunk::GreedyMeshDirection(
-	int D, int U, int V, 
-	FVector Normal, FVector Right, FVector Up, 
-	const TFunction<EVoxelType(int32, int32, int32)>& GetVoxel)
-{
-	const int Size = Config->ChunkSize;
-	const float VoxelSize = Config->VoxelSize;
-
-	TArray<bool> Mask;
-	Mask.SetNum(Size * Size);
-
-	for (int X = 0; X < Size; ++X)
-	{
-		for (int Y = 0; Y < Size; ++Y)
+		WeakThis->VoxelData = InVoxelData;
+		WeakThis->bHasData = true;
+		if (WeakThis->bGenerateMesh)
 		{
-			for (int Z = 0; Z < Size; ++Z)
-			{
-				int I[3] = { X, Y, Z };
-				int D1 = I[D];
-				if (D1 >= Size) continue;
-
-				// Build mask
-				for (int U1 = 0; U1 < Size; ++U1)
-				{
-					for (int V1 = 0; V1 < Size; ++V1)
-					{
-						I[U] = U1;
-						I[V] = V1;
-
-						EVoxelType Current = GetVoxel(I[0], I[1], I[2]);
-
-						int Dir = FMath::RoundToInt(Normal[D]);
-						I[D] += Dir;
-						EVoxelType Neighbor = (!ChunkData.IsInBounds(I[0], I[1], I[2])) ? EVoxelType::Air : GetVoxel(I[0], I[1], I[2]);
-						I[D] -= Dir;
-
-
-						bool Visible = Current != EVoxelType::Air && Neighbor == EVoxelType::Air;
-						Mask[U1 + V1 * Size] = Visible;
-					}
-				}
-
-				// Perform greedy merge in 2D (U, V)
-				for (int V1 = 0; V1 < Size; ++V1)
-				{
-					for (int U1 = 0; U1 < Size; )
-					{
-						if (!Mask[U1 + V1 * Size]) { ++U1; continue; }
-
-						int Width = 1;
-						while (U1 + Width < Size && Mask[U1 + Width + V1 * Size]) ++Width;
-
-						int Height = 1;
-						while (V1 + Height < Size)
-						{
-							bool RowGood = true;
-							for (int K = 0; K < Width; ++K)
-							{
-								if (!Mask[U1 + K + (V1 + Height) * Size]) { RowGood = false; break; }
-							}
-							if (!RowGood) break;
-							++Height;
-						}
-
-						// Clear used
-						for (int V2 = 0; V2 < Height; ++V2)
-						{
-							for (int U2 = 0; U2 < Width; ++U2)
-							{
-								Mask[U1 + U2 + (V1 + V2) * Size] = false;
-							}
-						}
-
-						// Create quad
-						FVector Origin = FVector::ZeroVector;
-						Origin[U] = U1;
-						Origin[V] = V1;
-						Origin[D] = (Normal[D] >= 0) ? D1 + 1 : D1;
-
-
-						FVector BasePos = Origin * VoxelSize;
-						FVector QuadRight = Right * Width * VoxelSize;
-						FVector QuadUp = Up * Height * VoxelSize;
-
-						int32 StartIndex = Vertices.Num();
-
-						Vertices.Add(BasePos);
-						Vertices.Add(BasePos + QuadRight);
-						Vertices.Add(BasePos + QuadRight + QuadUp);
-						Vertices.Add(BasePos + QuadUp);
-
-						if (Normal.X > 0 || Normal.Y < 0 || Normal.Z > 0)
-						{
-							Triangles.Append({StartIndex, StartIndex + 2, StartIndex + 1, StartIndex, StartIndex + 3, StartIndex + 2});
-						}
-						else
-						{
-							Triangles.Append({StartIndex, StartIndex + 1, StartIndex + 2, StartIndex, StartIndex + 2, StartIndex + 3});
-						}
-
-						Normals.Append({Normal, Normal, Normal, Normal});
-						
-						FVector2D UV0(0, 0);
-						FVector2D UV1(Width, 0);
-						FVector2D UV2(Width, Height);
-						FVector2D UV3(0, Height);
-
-						// Determine if UVs need to be flipped horizontally or vertically
-						if (Normal.X < 0 || Normal.Y > 0 || Normal.Z < 0)
-						{
-							std::swap(UV0.X, UV1.X);
-							std::swap(UV3.X, UV2.X);
-						}
-						UVs.Append({UV0, UV1, UV2, UV3});
-						//UVs.Append({FVector2D(0, 0), FVector2D(5, 0), FVector2D(5, 5), FVector2D(0, 5)});
-						
-						FLinearColor Color = FLinearColor::White;
-						if (Normal.X > 0) Color = FLinearColor::Blue;
-						if (Normal.X < 0) Color = FLinearColor::Red;
-						if (Normal.Y > 0) Color = FLinearColor::Green;
-						if (Normal.Y < 0) Color = FLinearColor::Yellow;
-						if (Normal.Z > 0) Color = FLinearColor::Gray;
-						if (Normal.Z < 0) Color = FLinearColor::Black;
-
-						VertexColors.Append({Color, Color, Color, Color});
-
-						FVector TangentVector = QuadRight.GetSafeNormal();
-						if (FVector::DotProduct(TangentVector, Normal) < 0)
-						{
-							TangentVector *= -1;
-						}
-
-						FProcMeshTangent Tangent = FProcMeshTangent(TangentVector, false);
-						Tangents.Append({Tangent, Tangent, Tangent, Tangent});
-
-					}
-				}
-			}
+			WeakThis->TryGenerateChunkMesh();
 		}
+		WeakThis->ChunkDataGeneratedEvent.Broadcast();
+		// REMOVE ALL LISTENERS
+		WeakThis->ChunkDataGeneratedEvent.Clear();
+	});
+}
+
+void AVoxelChunk::TryGenerateChunkMesh()
+{
+	if (!IsValid(this))
+    {
+        UE_LOG(LogTemp, Error, TEXT("VoxelChunk is invalid"));
+        return;
+    }
+
+    if (!VoxelWorld)
+    {
+        UE_LOG(LogTemp, Error, TEXT("VoxelWorld is null"));
+        return;
+    }
+
+    if (!VoxelWorld->VoxelProperties)
+    {
+        UE_LOG(LogTemp, Error, TEXT("VoxelProperties is null"));
+        return;
+    }
+
+    if (!bHasData)
+    {
+        UE_LOG(LogTemp, Error, TEXT("No Data!"));
+        return;
+    }
+
+    static const FIntPoint Offsets[] = {
+        {1, 0}, {-1, 0}, {0, 1}, {0, -1} // Only considering 2D neighbors
+    };
+    bool bAllGenerated = true;
+
+    for (const FIntPoint& Offset : Offsets)
+    {
+        FIntPoint NeighborCoord(ChunkCoords.X + Offset.X, ChunkCoords.Y + Offset.Y);
+        AVoxelChunk* NeighborChunk = nullptr;// = *VoxelWorld->Chunks.Find(NeighborCoord);
+        if (VoxelWorld->Chunks.Contains(NeighborCoord))
+        {
+            NeighborChunk = *VoxelWorld->Chunks.Find(NeighborCoord);
+        }
+        else
+        {
+            bAllGenerated = false;
+        }
+
+        // If NeighborChunk doesnt already exist, then we need to create it
+        if (NeighborChunk == nullptr)
+        {
+            bAllGenerated = false;
+            // We need to create the chunk & subscribe to on data generated
+            VoxelWorld->TryCreateNewChunk(NeighborCoord.X, NeighborCoord.Y, false);
+
+            NeighborChunk = *VoxelWorld->Chunks.Find(NeighborCoord);
+        }
+
+        if (NeighborChunk != nullptr)
+        {
+            // If neighborchunk doesnt already have data, subscribe to get notified when it finishes
+            if (!NeighborChunk->bHasData)
+            {
+                bAllGenerated = false;
+
+                // Check if already subscribed before adding
+                if (!NeighborChunk->OnChunkDataGenerated().IsBoundToObject(this))
+                {
+                    NeighborChunk->OnChunkDataGenerated().AddUObject(this, &AVoxelChunk::TryGenerateChunkMesh);
+                }
+            }
+        }
+    }
+
+    if (bAllGenerated)
+    {
+        //UE_LOG(LogTemp, Display, TEXT("ALL NEIGHBORING CHUNKS ARE GENERATED FOR (%d, %d)"), ChunkCoords.X, ChunkCoords.Y);
+
+        GenerateChunkMeshAsync();
+    }
+}
+
+void AVoxelChunk::GenerateChunkMeshAsync()
+{
+	if (!bGenerateMesh)
+	{
+		UE_LOG(LogTemp, Error, TEXT("CALLED GENERATE CHUNK ASYNC BUT CHUNK IS NOT MARKED FOR GENERATION"));
+		return;
 	}
+
+	if (!bHasData)
+	{
+		UE_LOG(LogTemp, Error, TEXT("CALLED GENERATE CHUNK ASYNC EVEN THOUGH WE DONT HAVE DATA YET"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("CALLED GENERATE CHUNK ASYNC"));
+	TWeakObjectPtr<AVoxelChunk> WeakThis(this);
+	TWeakObjectPtr<AVoxelWorld> WeakVoxelWorld(VoxelWorld);
+	const auto AsyncTraceTask =
+		new FAutoDeleteAsyncTask<FVoxelMeshTask>(VoxelData, ChunkCoords, WeakVoxelWorld, WeakThis);
+	AsyncTraceTask->StartBackgroundTask();
+}
+
+void AVoxelChunk::OnMeshGenerated(const TMap<FMeshSectionKey, FMeshData> InMeshSections)
+{
+    //UE_LOG(LogTemp, Error, TEXT("ON MESH GENERATED"));
+    TWeakObjectPtr<AVoxelChunk> WeakThis(this);
+
+    AsyncTask(ENamedThreads::GameThread, [InMeshSections, WeakThis]()
+    {
+        if (!WeakThis.IsValid())  // Check if AVoxelChunk is still valid before proceeding
+        {
+            UE_LOG(LogTemp, Error, TEXT("VoxelChunk was deleted before chunk could be loaded."));
+            return;
+        }
+        WeakThis->MeshSections = InMeshSections;
+        WeakThis->bHasMeshSections = true;
+        WeakThis->DisplayMesh();
+    });
+}
+
+void AVoxelChunk::DisplayMesh()  
+{  
+   MeshComponent->ClearAllMeshSections(); // Clear existing mesh sections before displaying new ones;  
+
+   // Apply mesh sections for each voxel type   
+   int SectionIndex = 0;  
+   int TotalTris = 0;  
+   int TotalVerts = 0;  
+
+   for (const auto& Entry : MeshSections)  
+   {  
+       FMeshSectionKey SectionKey = Entry.Key;
+       const FMeshData& MeshData = Entry.Value;  
+
+       if (MeshData.Vertices.Num() > 0)  
+       {  
+           MeshComponent->CreateMeshSection(  
+               SectionIndex, MeshData.Vertices, MeshData.Triangles, MeshData.Normals,  
+               MeshData.UVs, TArray<FColor>(), TArray<FProcMeshTangent>(), true);  
+
+           UMaterialInterface* BaseMaterial = VoxelWorld->VoxelProperties[SectionKey.VoxelType].Material;
+           // Check if the material is a dynamic material instance and set the TileCountX parameter  
+           UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(BaseMaterial, this);
+
+           if (MaterialInstance)
+           {  
+               if (SectionKey.Normal.Z == 0)
+               {
+                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetX"), VoxelWorld->VoxelProperties[SectionKey.VoxelType].SideTileOffset.X);
+                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetY"), VoxelWorld->VoxelProperties[SectionKey.VoxelType].SideTileOffset.Y);
+               }
+               else if (SectionKey.Normal.Z == 1)
+               {
+                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetX"), VoxelWorld->VoxelProperties[SectionKey.VoxelType].TopTileOffset.X);
+                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetY"), VoxelWorld->VoxelProperties[SectionKey.VoxelType].TopTileOffset.Y);
+               }
+               else if (SectionKey.Normal.Z == -1)
+               {
+                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetX"), VoxelWorld->VoxelProperties[SectionKey.VoxelType].BottomTileOffset.X);
+                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetY"), VoxelWorld->VoxelProperties[SectionKey.VoxelType].BottomTileOffset.Y);
+               }
+
+               // Set the material for the section  
+               MeshComponent->SetMaterial(SectionIndex, MaterialInstance);
+           }  
+
+           TotalTris += MeshData.Triangles.Num() / 3;  
+           TotalVerts += MeshData.Vertices.Num();  
+           SectionIndex++;  
+       }  
+   }  
+
+   VoxelWorld->ActiveChunksLock.WriteLock();  
+   VoxelWorld->ActiveChunks.Add(ChunkCoords, this);  
+   VoxelWorld->ActiveChunksLock.WriteUnlock();  
+}
+
+void AVoxelChunk::UnloadChunk()
+{
+    VoxelWorld->ActiveChunksLock.WriteLock();
+    VoxelWorld->ActiveChunks.Remove(ChunkCoords);
+    VoxelWorld->ActiveChunksLock.WriteUnlock();
+
+    VoxelWorld->ChunksLock.WriteLock();
+    VoxelWorld->Chunks.Remove(ChunkCoords);
+    VoxelWorld->ChunksLock.WriteUnlock();
+
+    MeshComponent->ClearAllMeshSections();
+    this->Destroy();
+}
+
+bool AVoxelChunk::IsVoxelInChunk(int X, int Y, int Z)
+{
+    if (!IsValid(VoxelWorld)) return false;
+	// returns true if the voxel is within the chunk bounds
+    return (X >= 0 && X < VoxelWorld->ChunkSize &&
+        Y >= 0 && Y < VoxelWorld->ChunkSize &&
+        Z >= 0 && Z < VoxelWorld->ChunkHeight);
+}
+
+/// <returns>Returns true when voxel is transparent or outside of the chunk</returns>
+bool AVoxelChunk::CheckVoxel(int X, int Y, int Z, FIntPoint ChunkCoord)
+{
+    if (!IsValid(VoxelWorld)) return false;
+    if (IsVoxelInChunk(X, Y, Z))
+    {
+        if (!IsValid(VoxelWorld)) return false;
+        int16 NeighborType = VoxelData[(Z * VoxelWorld->ChunkSize * VoxelWorld->ChunkSize) + (Y * VoxelWorld->ChunkSize) + X];
+        return AVoxelWorld::VoxelProperties[NeighborType].bIsTransparent;
+    }
+    else
+    {
+        if (!IsValid(VoxelWorld)) return false;
+        int WorldX = ChunkCoord.X * VoxelWorld->ChunkSize + X;
+        int WorldY = ChunkCoord.Y * VoxelWorld->ChunkSize + Y;
+        int16 NeighborType = VoxelWorld->GetVoxelAtWorldCoordinates(WorldX, WorldY, Z);
+        return AVoxelWorld::VoxelProperties[NeighborType].bIsTransparent;
+    }
+}
+
+void AVoxelChunk::SetChunkCoords(FIntPoint InCoords)
+{
+    ChunkCoords = InCoords;
 }
