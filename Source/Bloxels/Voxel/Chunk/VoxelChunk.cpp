@@ -2,7 +2,6 @@
 
 
 #include "VoxelChunk.h"
-
 #include "VoxelGenerationTask.h"
 #include "VoxelMeshTask.h"
 
@@ -149,7 +148,7 @@ void AVoxelChunk::GenerateChunkMeshAsync()
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("CALLED GENERATE CHUNK ASYNC"));
+	//UE_LOG(LogTemp, Warning, TEXT("CALLED GENERATE CHUNK ASYNC"));
 	TWeakObjectPtr<AVoxelChunk> WeakThis(this);
 	TWeakObjectPtr<AVoxelWorld> WeakVoxelWorld(VoxelWorld);
 	const auto AsyncTraceTask =
@@ -184,6 +183,8 @@ void AVoxelChunk::DisplayMesh()
    int TotalTris = 0;  
    int TotalVerts = 0;  
 
+	//UE_LOG(LogTemp, Error, TEXT("AVoxelChunk::DisplayMesh"));
+	
    for (const auto& Entry : MeshSections)  
    {  
        FMeshSectionKey SectionKey = Entry.Key;
@@ -219,7 +220,7 @@ void AVoxelChunk::DisplayMesh()
 
                // Set the material for the section  
                MeshComponent->SetMaterial(SectionIndex, MaterialInstance);
-           }  
+           }
 
            TotalTris += MeshData.Triangles.Num() / 3;  
            TotalVerts += MeshData.Vertices.Num();  

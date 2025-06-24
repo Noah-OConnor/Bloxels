@@ -19,6 +19,6 @@ public:
 	float VoxelSize = 100.0f; // 100 = 1m blocks
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Voxel Settings")
-	TMap<EVoxelType, FVoxelInfo> VoxelProperties;
+	TMap<EVoxelType, UVoxelInfo*> VoxelProperties;
 
 };

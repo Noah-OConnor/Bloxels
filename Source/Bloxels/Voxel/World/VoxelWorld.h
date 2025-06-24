@@ -25,7 +25,7 @@ public:
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel")
-    UDataTable* VoxelDataTable;
+    TSoftObjectPtr<UVoxelInfo> VoxelInfoDataAsset;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel")
     UDataTable* BiomeDataTable;
 
@@ -75,7 +75,7 @@ public:
     mutable FRWLock ActiveChunksLock;
     UPROPERTY(VisibleAnywhere)
     TMap<FIntPoint, AVoxelChunk*> ActiveChunks; // Store Active chunks in a map
-    static FVoxelInfo VoxelProperties[UINT16_MAX];
+    static FVoxelData VoxelProperties[UINT16_MAX];
 
     bool bIsShuttingDown = false;
 

@@ -9,8 +9,10 @@ UENUM(BlueprintType)
 enum class EVoxelType : uint8
 {
     Air     UMETA(DisplayName = "Air"),
+	Grass	UMETA(DisplayName = "Grass"),
     Dirt    UMETA(DisplayName = "Dirt"),
     Stone   UMETA(DisplayName = "Stone"),
+    Sand   UMETA(DisplayName = "Sand"),
     Obsidian UMETA(DisplayName = "Obsidian")
 	// More will be added here as needed
 };

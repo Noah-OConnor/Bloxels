@@ -3,32 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "VoxelTypes.h"
+#include "VoxelData.h"
 #include "VoxelInfo.generated.h"
 
-USTRUCT(BlueprintType)
-struct FVoxelInfo : public FTableRowBase
+UCLASS(BlueprintType)
+class UVoxelInfo : public UDataAsset
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EVoxelType VoxelType;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bIsSolid = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bIsTransparent = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UMaterialInterface* Material = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FIntPoint TopTileOffset = FIntPoint(0, 0);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FIntPoint BottomTileOffset = FIntPoint(0, 0);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FIntPoint SideTileOffset = FIntPoint(0, 0);
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel")
+	TArray<FVoxelData> VoxelData;
 };

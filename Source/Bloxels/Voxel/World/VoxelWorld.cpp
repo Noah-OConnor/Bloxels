@@ -1,3 +1,5 @@
+// Copyright 2025 Noah O'Connor. All rights reserved.
+
 #include "VoxelWorld.h"
 #include "DrawDebugHelpers.h"
 #include "Biome/BiomeProperties.h"
@@ -52,35 +54,26 @@ void AVoxelWorld::InitializeNoiseLayers()
 
 void AVoxelWorld::InitializeVoxelProperties()
 {
-    if (!VoxelDataTable)
+    if (!VoxelInfoDataAsset.IsValid())
     {
-        UE_LOG(LogTemp, Error, TEXT("Voxel DataTable is not assigned in the editor!"));
+        UE_LOG(LogTemp, Error, TEXT("VoxelInfoDataAsset is not assigned or failed to load."));
         return;
     }
 
-    static const FString ContextString(TEXT("Voxel Properties Context"));
-    TArray<FVoxelInfo*> AllRows;
-    VoxelDataTable->GetAllRows(ContextString, AllRows);
-
-    for (const FVoxelInfo* Row : AllRows)
+    for (const FVoxelData& Entry : VoxelInfoDataAsset->VoxelData)
     {
-        if (!Row) continue;
+        uint16 VoxelIndex = static_cast<uint16>(Entry.VoxelType);
+        if (VoxelIndex >= UINT16_MAX) continue;
 
-        uint16 VoxelIndex = static_cast<uint16>(Row->VoxelType);
+        VoxelProperties[VoxelIndex] = Entry;
 
-        if (VoxelIndex >= UINT16_MAX)
-        {
-            UE_LOG(LogTemp, Error, TEXT("Voxel ID %d exceeds maximum allowed index!"), VoxelIndex);
-            continue;
-        }
-
-        AVoxelWorld::VoxelProperties[VoxelIndex] = *Row;
-        UE_LOG(LogTemp, Log, TEXT("Loaded Voxel ID: %d - Solid: %s, Transparent: %s"),
+        UE_LOG(LogTemp, Log, TEXT("Loaded VoxelType %d - Solid: %s, Transparent: %s"),
             VoxelIndex,
-            AVoxelWorld::VoxelProperties[VoxelIndex].bIsSolid ? TEXT("True") : TEXT("False"),
-            AVoxelWorld::VoxelProperties[VoxelIndex].bIsTransparent ? TEXT("True") : TEXT("False"));
+            Entry.bIsSolid ? TEXT("True") : TEXT("False"),
+            Entry.bIsTransparent ? TEXT("True") : TEXT("False"));
     }
 }
+
 
 void AVoxelWorld::GenerateInitialWorld()
 {
@@ -407,7 +400,7 @@ const FBiomeProperties* AVoxelWorld::GetBiomeData(EBiome Biome) const
     return nullptr;
 }
 
-FVoxelInfo AVoxelWorld::VoxelProperties[UINT16_MAX] = {};
+FVoxelData AVoxelWorld::VoxelProperties[UINT16_MAX] = {};
 
 int16 AVoxelWorld::GetVoxelAtWorldCoordinates(int X, int Y, int Z)
 {

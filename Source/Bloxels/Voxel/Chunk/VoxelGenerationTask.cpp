@@ -1,3 +1,5 @@
+// Copyright 2025 Noah O'Connor. All rights reserved.
+
 #include "VoxelGenerationTask.h"
 #include "VoxelChunk.h"
 #include "Bloxels/Voxel/World/Biome/BiomeProperties.h"
