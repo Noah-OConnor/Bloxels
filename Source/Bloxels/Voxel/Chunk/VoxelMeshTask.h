@@ -1,6 +1,6 @@
 #pragma once
 
-#include <functional>
+#include "functional"
 
 #include "CoreMinimal.h"
 #include "Async/AsyncWork.h"
@@ -15,23 +15,36 @@ class BLOXELS_API FVoxelMeshTask : public FNonAbandonableTask
     friend class FAutoDeleteAsyncTask<FVoxelMeshTask>;
 
 public:
-    FVoxelMeshTask(TArray<uint16>& InVoxelData, FIntPoint& InChunkCoords, 
+    FVoxelMeshTask(const TArray<uint16>& InVoxelData, const FIntPoint& InChunkCoords, 
         TWeakObjectPtr<AVoxelWorld> InVoxelWorld, TWeakObjectPtr<AVoxelChunk> InVoxelChunk);
 
-    FORCEINLINE TStatId GetStatId() const
+    static TStatId GetStatId();
+    
+private:
+    struct FVoxelFace
     {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(FVoxelMeshTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
-
-    void DoWork();
-    void GreedyMeshChunk(TMap<FMeshSectionKey, FMeshData>& MeshSections);
-    void ProcessXYFace(int Axis1, int Axis2, int Axis3, FVector Normal, std::function<bool(int, int, int)> CheckNeighbor, std::function<FVector(int, int, int)> GetVoxelPosition, TMap<FMeshSectionKey, FMeshData>& MeshSections);
-    void ProcessXZFace(int Axis1, int Axis2, int Axis3, FVector Normal, std::function<bool(int, int, int)> CheckNeighbor, std::function<FVector(int, int, int)> GetVoxelPosition, TMap<FMeshSectionKey, FMeshData>& MeshSections);
-    void ProcessYZFace(int Direction, TMap<FMeshSectionKey, FMeshData>& MeshSections, FIntPoint ChunkCoord);
-    void AddMergedFace(FVector Position, TArray<FVector>& Vertices, TArray<int32>& Triangles, TArray<FVector>& Normals, TArray<FVector2D>& UVs, FVector Normal, int32 Width, int32 Height);
-
+        int16 VoxelType = 0;
+        bool bVisible = false;
+    };
+    
     TArray<uint16> VoxelData;
     FIntPoint ChunkCoords;
     TWeakObjectPtr<AVoxelWorld> VoxelWorld;
     TWeakObjectPtr<AVoxelChunk> VoxelChunk;
+    
+    void DoWork();
+    void GreedyMeshChunk(TMap<FMeshSectionKey, FMeshData>& MeshSections);
+
+    void ProcessFace(
+        int PrimaryCount,
+        int ACount,
+        int BCount,
+        const FVector& Normal,
+        const std::function<int(int, int, int)>& GetVoxelIndex,
+        const std::function<bool(int, int, int)>& IsNeighborVisible,
+        const std::function<FVector(int, int, int)>& GetVoxelPosition,
+        TMap<FMeshSectionKey, FMeshData>& MeshSections);
+
+    void AddMergedFace(FVector Position, TArray<FVector>& Vertices, TArray<int32>& Triangles, TArray<FVector>& Normals, TArray<FVector2D>& UVs, FVector Normal, int32 Width, int32 Height) const;
+    int GetIndex(int X, int Y, int Z) const;
 };
