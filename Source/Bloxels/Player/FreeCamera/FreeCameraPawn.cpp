@@ -4,7 +4,6 @@
 
 #include "EngineUtils.h"
 #include "Bloxels/Voxel/PathFinding/PathFindingNode.h"
-#include "Bloxels/Voxel/World/VoxelWorld.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
 #include "Components/InputComponent.h"
@@ -26,8 +25,7 @@ void AFreeCameraPawn::BeginPlay()
 {
     Super::BeginPlay();
 
-    APlayerController* PC = Cast<APlayerController>(GetController());
-    if (PC)
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
         PC->bShowMouseCursor = false;
         PC->SetInputMode(FInputModeGameOnly());
@@ -74,18 +72,27 @@ void AFreeCameraPawn::OnLeftClick()
     UE_LOG(LogTemp, Log, TEXT("OnLeftClick"));
     if (!PathManager) return;
 
-    FVector Start = Camera->GetComponentLocation();
-    FVector Dir = Camera->GetForwardVector();
-    FVector End = Start + Dir * 10000.f;
+    const FVector Start = Camera->GetComponentLocation();
+    const FVector Dir = Camera->GetForwardVector();
+    const FVector End = Start + Dir * 10000.f;
 
     DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 2.f, 0, 1.f);
 
-    FHitResult Hit;
-    if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility))
+    if (FHitResult Hit; GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility))
     {
         const FVector HitLocation = Hit.ImpactPoint;
         const FVector Normal = Hit.ImpactNormal;
-        const FVector Adjusted = HitLocation + Normal * 100.f;
+        FVector Adjusted = HitLocation;
+        
+        // If the surface normal is pointing up, use the block below
+        if (Normal.Equals(FVector::UpVector, 0.1f))
+        {
+            Adjusted += FVector(0, 0, 50.f);  // Half block down
+        }
+        else
+        {
+            Adjusted += Normal * 50.f;  // Half block in direction
+        }
 
         StartCoord = FIntVector(
             FMath::FloorToInt(Adjusted.X / 100.f) ,
@@ -96,7 +103,7 @@ void AFreeCameraPawn::OnLeftClick()
         UE_LOG(LogTemp, Log, TEXT("Set START to %s"), *StartCoord.ToString());
     }
 
-    if (TSharedPtr<FPathFindingNode> Node = PathManager->GetNodeAt(StartCoord))
+    if (const TSharedPtr<FPathFindingNode> Node = PathManager->GetNodeAt(StartCoord))
     {
         UE_LOG(LogTemp, Warning, TEXT("Start Node exists. Walkable? %s"), Node->bIsWalkable ? TEXT("YES") : TEXT("NO"));
     }
@@ -113,19 +120,28 @@ void AFreeCameraPawn::OnRightClick()
     
     if (!PathManager) return;
 
-    FVector Start = Camera->GetComponentLocation();
-    FVector Dir = Camera->GetForwardVector();
-    FVector End = Start + Dir * 10000.f;
+    const FVector Start = Camera->GetComponentLocation();
+    const FVector Dir = Camera->GetForwardVector();
+    const FVector End = Start + Dir * 10000.f;
 
     DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 2.f, 0, 1.f);
 
-    FHitResult Hit;
-    if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility))
+    if (FHitResult Hit; GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility))
     {
         const FVector HitLocation = Hit.ImpactPoint;
         const FVector Normal = Hit.ImpactNormal;
-        const FVector Adjusted = HitLocation + Normal * 100.f;
-
+        FVector Adjusted = HitLocation;
+        
+        // If the surface normal is pointing up, use the block below
+        if (Normal.Equals(FVector::UpVector, 0.1f))
+        {
+            Adjusted += FVector(0, 0, 50.f);  // Half block down
+        }
+        else
+        {
+            Adjusted += Normal * 50.f;  // Half block in direction
+        }
+        
         EndCoord = FIntVector(
             FMath::FloorToInt(Adjusted.X / 100.f),
             FMath::FloorToInt(Adjusted.Y / 100.f),
@@ -134,10 +150,10 @@ void AFreeCameraPawn::OnRightClick()
 
         UE_LOG(LogTemp, Log, TEXT("Set END to %s"), *EndCoord.ToString());
 
-        TSharedPtr<FPathFindingNode> StartNode = PathManager->GetNodeAt(StartCoord);
-        TSharedPtr<FPathFindingNode> EndNode = PathManager->GetNodeAt(EndCoord);
-        
-        FVector Offset( 50.f, 50.f, -50.f );
+        const TSharedPtr<FPathFindingNode> StartNode = PathManager->GetNodeAt(StartCoord);
+        const TSharedPtr<FPathFindingNode> EndNode = PathManager->GetNodeAt(EndCoord);
+
+        const FVector Offset( 50.f, 50.f, 50.f );
         if (StartNode && EndNode)
         {
             TArray<FVector> Path = PathManager->FindPath(StartNode->Position, EndNode->Position);
@@ -149,10 +165,11 @@ void AFreeCameraPawn::OnRightClick()
         else
         {
             UE_LOG(LogTemp, Warning, TEXT("Invalid path nodes"));
+            return;
         }
     }
     
-    if (TSharedPtr<FPathFindingNode> Node = PathManager->GetNodeAt(StartCoord))
+    if (const TSharedPtr<FPathFindingNode> Node = PathManager->GetNodeAt(EndCoord))
     {
         UE_LOG(LogTemp, Warning, TEXT("End Node exists. Walkable? %s"), Node->bIsWalkable ? TEXT("YES") : TEXT("NO"));
     }

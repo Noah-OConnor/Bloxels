@@ -18,15 +18,17 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
-
-public:
 	virtual void Tick(float DeltaTime) override;
 
-	FIntVector StartCoord;
-	FIntVector EndCoord;
-
+private:
 	UPROPERTY(EditAnywhere)
 	APathfindingManager* PathManager;
+	
+	UPROPERTY(VisibleAnywhere)
+	class UCameraComponent* Camera;
+
+	UPROPERTY(VisibleAnywhere)
+	class UFloatingPawnMovement* Movement;
 
 	UFUNCTION()
 	void OnLeftClick();
@@ -34,12 +36,8 @@ public:
 	UFUNCTION()
 	void OnRightClick();
 
-private:
-	UPROPERTY(VisibleAnywhere)
-	class UCameraComponent* Camera;
-
-	UPROPERTY(VisibleAnywhere)
-	class UFloatingPawnMovement* Movement;
+	FIntVector StartCoord;
+	FIntVector EndCoord;
 
 	// Movement input
 	FVector2D MoveInput;
