@@ -2,8 +2,11 @@
 
 
 #include "VoxelChunk.h"
+
+#include "EngineUtils.h"
 #include "VoxelGenerationTask.h"
 #include "VoxelMeshTask.h"
+#include "Bloxels/Voxel/PathFinding/PathFindingManager.h"
 
 
 AVoxelChunk::AVoxelChunk()
@@ -156,7 +159,7 @@ void AVoxelChunk::GenerateChunkMeshAsync()
 	AsyncTraceTask->StartBackgroundTask();
 }
 
-void AVoxelChunk::OnMeshGenerated(const TMap<FMeshSectionKey, FMeshData> InMeshSections)
+void AVoxelChunk::OnMeshGenerated(const TMap<FMeshSectionKey, FMeshData>& InMeshSections)
 {
     //UE_LOG(LogTemp, Error, TEXT("ON MESH GENERATED"));
     TWeakObjectPtr<AVoxelChunk> WeakThis(this);
@@ -186,11 +189,10 @@ void AVoxelChunk::DisplayMesh()
 	//UE_LOG(LogTemp, Error, TEXT("AVoxelChunk::DisplayMesh"));
 	
    for (const auto& Entry : MeshSections)  
-   {  
-       FMeshSectionKey SectionKey = Entry.Key;
-       const FMeshData& MeshData = Entry.Value;  
+   {
+       const FMeshSectionKey SectionKey = Entry.Key;
 
-       if (MeshData.Vertices.Num() > 0)  
+       if (const FMeshData& MeshData = Entry.Value; MeshData.Vertices.Num() > 0)  
        {  
            MeshComponent->CreateMeshSection(  
                SectionIndex, MeshData.Vertices, MeshData.Triangles, MeshData.Normals,  
@@ -198,9 +200,8 @@ void AVoxelChunk::DisplayMesh()
 
            UMaterialInterface* BaseMaterial = VoxelWorld->VoxelProperties[SectionKey.VoxelType].Material;
            // Check if the material is a dynamic material instance and set the TileCountX parameter  
-           UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(BaseMaterial, this);
 
-           if (MaterialInstance)
+           if (UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(BaseMaterial, this))
            {  
                if (SectionKey.Normal.Z == 0)
                {
@@ -230,7 +231,16 @@ void AVoxelChunk::DisplayMesh()
 
    VoxelWorld->ActiveChunksLock.WriteLock();  
    VoxelWorld->ActiveChunks.Add(ChunkCoords, this);  
-   VoxelWorld->ActiveChunksLock.WriteUnlock();  
+   VoxelWorld->ActiveChunksLock.WriteUnlock();
+
+	for (TActorIterator<APathfindingManager> It(GetWorld()); It; ++It)
+	{
+		if (APathfindingManager* PFManager = *It)
+		{
+			PFManager->BuildPathfindingNodes(VoxelWorld);
+			break;
+		}
+	}
 }
 
 void AVoxelChunk::UnloadChunk()
@@ -247,7 +257,7 @@ void AVoxelChunk::UnloadChunk()
     this->Destroy();
 }
 
-bool AVoxelChunk::IsVoxelInChunk(int X, int Y, int Z)
+bool AVoxelChunk::IsVoxelInChunk(int X, int Y, int Z) const
 {
     if (!IsValid(VoxelWorld)) return false;
 	// returns true if the voxel is within the chunk bounds
