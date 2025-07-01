@@ -23,8 +23,6 @@ void AVoxelWorld::BeginPlay()
     GenerateInitialWorld();
     InitializePlayer();
     InitializeTriggerVolume();
-
-    
 }
 
 void AVoxelWorld::InitializeNoiseLayers()

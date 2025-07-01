@@ -6,7 +6,7 @@
 #include "EngineUtils.h"
 #include "VoxelGenerationTask.h"
 #include "VoxelMeshTask.h"
-#include "Bloxels/Voxel/PathFinding/PathFindingManager.h"
+#include "Bloxels/Voxel/PathFinding/PathfindingManager.h"
 
 
 AVoxelChunk::AVoxelChunk()
@@ -232,15 +232,6 @@ void AVoxelChunk::DisplayMesh()
    VoxelWorld->ActiveChunksLock.WriteLock();  
    VoxelWorld->ActiveChunks.Add(ChunkCoords, this);  
    VoxelWorld->ActiveChunksLock.WriteUnlock();
-
-	for (TActorIterator<APathfindingManager> It(GetWorld()); It; ++It)
-	{
-		if (APathfindingManager* PFManager = *It)
-		{
-			PFManager->BuildPathfindingNodes(VoxelWorld);
-			break;
-		}
-	}
 }
 
 void AVoxelChunk::UnloadChunk()

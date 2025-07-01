@@ -3,7 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Bloxels/Voxel/PathFinding/PathFindingManager.h"
+#include "Bloxels/Voxel/PathFinding/PathfindingComponent.h"
+#include "Bloxels/Voxel/PathFinding/PathfindingManager.h"
 #include "GameFramework/Pawn.h"
 #include "FreeCameraPawn.generated.h"
 
@@ -22,7 +23,10 @@ protected:
 
 private:
 	UPROPERTY(EditAnywhere)
-	APathfindingManager* PathManager;
+	UPathfindingManager* PathManager;
+
+	UPROPERTY(VisibleAnywhere)
+	UPathfindingComponent* PathfindingComponent;
 	
 	UPROPERTY(VisibleAnywhere)
 	class UCameraComponent* Camera;
