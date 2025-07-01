@@ -18,7 +18,7 @@ void UPathfindingComponent::FindPath(const FIntVector& StartCoord, const FIntVec
     Path.Empty();
 
     TMap<FIntVector, TSharedPtr<FPathfindingNode>> NodeMap;
-    TQueue<TSharedPtr<FPathfindingNode>> OpenSet;
+    TArray<TSharedPtr<FPathfindingNode>> OpenSet;
 
     auto StartNode = CreateNode(StartCoord);
     auto EndNode = CreateNode(EndCoord);
@@ -35,12 +35,18 @@ void UPathfindingComponent::FindPath(const FIntVector& StartCoord, const FIntVec
     if (!StartNode || !EndNode) return;
 
     NodeMap.Add(StartCoord, StartNode);
-    OpenSet.Enqueue(StartNode);
+    OpenSet.Add(StartNode);
 
     while (!OpenSet.IsEmpty())
     {
-        TSharedPtr<FPathfindingNode> Current;
-        OpenSet.Dequeue(Current);
+        // Sort by FCost before each iteration (O(n log n), but fine for small sets)
+        OpenSet.Sort([](const TSharedPtr<FPathfindingNode>& A, const TSharedPtr<FPathfindingNode>& B)
+        {
+            return A->FCost() < B->FCost();
+        });
+
+        TSharedPtr<FPathfindingNode> Current = OpenSet[0];
+        OpenSet.RemoveAt(0);
 
         if (Current->Coord == EndCoord)
         {
@@ -53,30 +59,31 @@ void UPathfindingComponent::FindPath(const FIntVector& StartCoord, const FIntVec
             return;
         }
 
-        for (const FNeighborResult& Neighbor : GetNeighbors(Current))        {
+        for (const FNeighborResult& Neighbor : GetNeighbors(Current))
+        {
             float NewGCost = Current->GCost + Neighbor.MoveCost;
             if (!NodeMap.Contains(Neighbor.Node->Coord) || NewGCost < Neighbor.Node->GCost)
             {
                 Neighbor.Node->GCost = NewGCost;
-                Neighbor.Node->HCost = FVector::Dist(
-                    FVector(Neighbor.Node->Coord),
-                    FVector(EndCoord)
-                );
+                Neighbor.Node->HCost = FVector::Dist(FVector(Neighbor.Node->Coord), FVector(EndCoord));
                 Neighbor.Node->Parent = Current;
 
                 NodeMap.Add(Neighbor.Node->Coord, Neighbor.Node);
-                OpenSet.Enqueue(Neighbor.Node);
+
+                if (!OpenSet.Contains(Neighbor.Node))
+                {
+                    OpenSet.Add(Neighbor.Node);
+                }
             }
         }
     }
-
 }
 
 void UPathfindingComponent::DrawDebugPath(float Duration) const
 {
     for (int i = 0; i < Path.Num() - 1; ++i)
     {
-        DrawDebugLine(GetWorld(), Path[i] + FVector(50), Path[i + 1] + FVector(50), FColor::Green, false, Duration, 0, 3.f);
+        DrawDebugLine(GetWorld(), Path[i] + FVector(50), Path[i + 1] + FVector(50), FColor::Red, false, Duration, 0, 3.f);
     }
 }
 
@@ -88,8 +95,10 @@ TSharedPtr<FPathfindingNode> UPathfindingComponent::CreateNode(const FIntVector&
 
 TArray<FNeighborResult> UPathfindingComponent::GetNeighbors(TSharedPtr<FPathfindingNode> Node)
 {
-    const float StraightCost = 1.0f;
-    const float DiagonalCost = 1.41f; // Approx √2
+    const float StraightCost = 10.f;
+    const float DiagonalCost = 14.f; // Approx √2
+    const float StepUpCost = 5.f;
+    const float FallCost = 3.f;
 
     const TArray<TPair<FIntVector, float>> Directions = {
         {FIntVector( 1,  0, 0), StraightCost},
@@ -109,35 +118,48 @@ TArray<FNeighborResult> UPathfindingComponent::GetNeighbors(TSharedPtr<FPathfind
     for (const auto& DirPair : Directions)
     {
         const FIntVector Offset = DirPair.Key;
-        const float MoveCost = DirPair.Value;
+        float MoveCost = DirPair.Value;
 
         FIntVector BaseCoord = Node->Coord + Offset;
+        
+        bool bIsDiagonal = Offset.X != 0 && Offset.Y != 0;
+        if (bIsDiagonal)
+        {
+            FIntVector Side1 = Node->Coord + FIntVector(Offset.X, 0, 0);
+            FIntVector Side2 = Node->Coord + FIntVector(0, Offset.Y, 0);
 
-        // 1. Try flat
+            // If either side is not walkable, skip the diagonal
+            if (!PathManager->IsWalkable(Side1) || !PathManager->IsWalkable(Side2))
+            {
+                continue;
+            }
+        }
+        
+        // Try flat
         if (auto N = CreateNode(BaseCoord))
         {
             Neighbors.Add(FNeighborResult(N, MoveCost));
             continue;
         }
 
-        // 2. Step up
+        // Step up
         for (int Step = 1; Step <= MaxStepUp; ++Step)
         {
             FIntVector UpCoord = BaseCoord + FIntVector(0, 0, Step);
             if (auto N = CreateNode(UpCoord))
             {
-                Neighbors.Add(FNeighborResult(N, MoveCost));
+                Neighbors.Add(FNeighborResult(N, MoveCost + StepUpCost));
                 break;
             }
         }
 
-        // 3. Drop down
+        // Drop down
         for (int Drop = 1; Drop <= MaxFallDistance; ++Drop)
         {
             FIntVector DownCoord = BaseCoord - FIntVector(0, 0, Drop);
             if (auto N = CreateNode(DownCoord))
             {
-                Neighbors.Add(FNeighborResult(N, MoveCost));
+                Neighbors.Add(FNeighborResult(N, MoveCost + (FallCost * Drop)));
                 break;
             }
 

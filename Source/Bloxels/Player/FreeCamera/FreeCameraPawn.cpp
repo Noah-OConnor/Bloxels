@@ -139,6 +139,12 @@ void AFreeCameraPawn::OnRightClick()
         {
             PathfindingComponent->FindPath(StartCoord, EndCoord);
             PathfindingComponent->DrawDebugPath(10.f);
+
+            FVector StartCenter = FVector(StartCoord) * 100.f + FVector(50.f);
+            DrawDebugBox(GetWorld(), StartCenter, FVector(50.f), FColor::Blue, false, 10.f, 0, 2.f);
+            
+            FVector EndCenter = FVector(EndCoord) * 100.f + FVector(50.f);
+            DrawDebugBox(GetWorld(), EndCenter, FVector(50.f), FColor::Red, false, 10.f, 0, 2.f);
         }
     }
 }
