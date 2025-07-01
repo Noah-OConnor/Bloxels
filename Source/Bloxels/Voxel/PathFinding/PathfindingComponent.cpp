@@ -83,7 +83,7 @@ void UPathfindingComponent::DrawDebugPath(float Duration) const
 {
     for (int i = 0; i < Path.Num() - 1; ++i)
     {
-        DrawDebugLine(GetWorld(), Path[i] + FVector(50), Path[i + 1] + FVector(50), FColor::Red, false, Duration, 0, 3.f);
+        DrawDebugLine(GetWorld(), Path[i] + FVector(50), Path[i + 1] + FVector(50), FColor::Red, false, Duration, 0, 5.f);
     }
 }
 
