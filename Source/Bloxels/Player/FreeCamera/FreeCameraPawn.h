@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Bloxels/Voxel/PathFinding/PathfindingComponent.h"
 #include "Bloxels/Voxel/PathFinding/PathfindingManager.h"
+#include "Camera/CameraComponent.h"
 #include "GameFramework/Pawn.h"
 #include "FreeCameraPawn.generated.h"
 
@@ -15,6 +16,8 @@ class BLOXELS_API AFreeCameraPawn : public APawn
 
 public:
 	AFreeCameraPawn();
+
+	UCameraComponent* GetCamera() const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -29,7 +32,7 @@ private:
 	UPathfindingComponent* PathfindingComponent;
 	
 	UPROPERTY(VisibleAnywhere)
-	class UCameraComponent* Camera;
+	UCameraComponent* Camera;
 
 	UPROPERTY(VisibleAnywhere)
 	class UFloatingPawnMovement* Movement;

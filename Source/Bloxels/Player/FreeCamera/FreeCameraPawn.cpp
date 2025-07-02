@@ -24,6 +24,11 @@ AFreeCameraPawn::AFreeCameraPawn()
     PathfindingComponent = CreateDefaultSubobject<UPathfindingComponent>(TEXT("PathfindingComponent"));
 }
 
+UCameraComponent* AFreeCameraPawn::GetCamera() const
+{
+    return Camera;
+}
+
 void AFreeCameraPawn::BeginPlay()
 {
     Super::BeginPlay();
