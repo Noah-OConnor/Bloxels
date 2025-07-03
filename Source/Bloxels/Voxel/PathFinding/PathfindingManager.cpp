@@ -67,9 +67,11 @@ bool UPathfindingManager::FindPath(const FIntVector& StartCoord, const FIntVecto
 TArray<FNeighborResult> UPathfindingManager::GetNeighbors(TSharedPtr<FPathfindingNode> Node)
 {
     const float StraightCost = 10.f;
-    const float DiagonalCost = 14.f; // Approx √2
+    const float DiagonalCost = 14.f;
     const float StepUpCost = 5.f;
     const float FallCost = 3.f;
+    const int MaxStepUp = 1;
+    const int MaxFallDistance = 3;
 
     const TArray<TPair<FIntVector, float>> Directions = {
         {FIntVector( 1,  0, 0), StraightCost},
@@ -83,30 +85,19 @@ TArray<FNeighborResult> UPathfindingManager::GetNeighbors(TSharedPtr<FPathfindin
     };
 
     TArray<FNeighborResult> Neighbors;
-    const int MaxStepUp = 1;
-    const int MaxFallDistance = 3;
 
     for (const auto& DirPair : Directions)
     {
         const FIntVector Offset = DirPair.Key;
         float MoveCost = DirPair.Value;
-
         FIntVector BaseCoord = Node->Coord + Offset;
-        
-        bool bIsDiagonal = Offset.X != 0 && Offset.Y != 0;
-        if (bIsDiagonal)
-        {
-            FIntVector Side1 = Node->Coord + FIntVector(Offset.X, 0, 0);
-            FIntVector Side2 = Node->Coord + FIntVector(0, Offset.Y, 0);
 
-            // If either side is not walkable, skip the diagonal
-            if (!IsWalkable(Side1) || !IsWalkable(Side2))
-            {
-                continue;
-            }
+        if (Offset.X != 0 && Offset.Y != 0 && !IsDiagonalAllowed(Node->Coord, Offset, MaxFallDistance))
+        {
+            continue;
         }
-        
-        // Try flat
+
+        // Try same level
         if (auto N = CreateNode(BaseCoord))
         {
             Neighbors.Add(FNeighborResult(N, MoveCost));
@@ -114,33 +105,15 @@ TArray<FNeighborResult> UPathfindingManager::GetNeighbors(TSharedPtr<FPathfindin
         }
 
         // Step up
-        for (int Step = 1; Step <= MaxStepUp; ++Step)
-        {
-            FIntVector UpCoord = BaseCoord + FIntVector(0, 0, Step);
-            if (auto N = CreateNode(UpCoord))
-            {
-                Neighbors.Add(FNeighborResult(N, MoveCost + StepUpCost));
-                break;
-            }
-        }
+        TryStepUp(Neighbors, BaseCoord, MoveCost, StepUpCost, MaxStepUp);
 
         // Drop down
-        for (int Drop = 1; Drop <= MaxFallDistance; ++Drop)
-        {
-            FIntVector DownCoord = BaseCoord - FIntVector(0, 0, Drop);
-            if (auto N = CreateNode(DownCoord))
-            {
-                Neighbors.Add(FNeighborResult(N, MoveCost + (FallCost * Drop)));
-                break;
-            }
-
-            if (IsSolid(DownCoord))
-                break;
-        }
+        TryFallDown(Neighbors, Node->Coord, Offset, MoveCost, FallCost, MaxFallDistance);
     }
 
     return Neighbors;
 }
+
 
 TSharedPtr<FPathfindingNode> UPathfindingManager::CreateNode(const FIntVector& Coord)
 {
@@ -166,6 +139,81 @@ void UPathfindingManager::SetVoxelWorld(AVoxelWorld* InWorld)
 {
     VoxelWorld = InWorld;
 }
+
+bool UPathfindingManager::IsDiagonalAllowed(const FIntVector& Coord, const FIntVector& Offset, int MaxFallDistance) const
+{
+    FIntVector Side1 = Coord + FIntVector(Offset.X, 0, 0);
+    FIntVector Side2 = Coord + FIntVector(0, Offset.Y, 0);
+    FIntVector UpOffset(0, 0, 1);
+
+    if (IsAir(Side1) && IsAir(Side1 + UpOffset) && IsAir(Side2) && IsAir(Side2 + UpOffset))
+    {
+        FIntVector Diagonal = Coord + Offset;
+
+        for (int Drop = 1; Drop <= MaxFallDistance; ++Drop)
+        {
+            FIntVector DropCoord = Diagonal - FIntVector(0, 0, Drop);
+            if (IsWalkable(DropCoord)) return true;
+            if (IsSolid(DropCoord)) break;
+        }
+    }
+
+    // If not dropping, enforce no corner cutting
+    return IsWalkable(Side1) && IsWalkable(Side2);
+}
+
+
+void UPathfindingManager::TryStepUp(
+    TArray<FNeighborResult>& OutNeighbors,
+    const FIntVector& Coord,
+    float MoveCost,
+    float StepCost,
+    int MaxStep
+)
+{
+    for (int Step = 1; Step <= MaxStep; ++Step)
+    {
+        FIntVector StepCoord = Coord + FIntVector(0, 0, Step);
+        if (auto N = CreateNode(StepCoord))
+        {
+            OutNeighbors.Add(FNeighborResult(N, MoveCost + StepCost));
+            break;
+        }
+    }
+}
+
+
+void UPathfindingManager::TryFallDown(
+    TArray<FNeighborResult>& OutNeighbors,
+    const FIntVector& NodeCoord,
+    const FIntVector& Offset,
+    float MoveCost,
+    float FallCost,
+    int MaxFall
+)
+{
+    FIntVector Side1 = NodeCoord + FIntVector(Offset.X, 0, 0);
+    FIntVector Side2 = NodeCoord + FIntVector(0, Offset.Y, 0);
+    FIntVector Up(0, 0, 1);
+
+    if (!(IsAir(Side1) && IsAir(Side1 + Up) && IsAir(Side2) && IsAir(Side2 + Up)))
+        return;
+
+    FIntVector Start = NodeCoord + Offset;
+
+    for (int Drop = 1; Drop <= MaxFall; ++Drop)
+    {
+        FIntVector FallCoord = Start - FIntVector(0, 0, Drop);
+        if (auto N = CreateNode(FallCoord))
+        {
+            OutNeighbors.Add(FNeighborResult(N, MoveCost + FallCost * Drop));
+            break;
+        }
+        if (IsSolid(FallCoord))
+            break;
+    }
+}
+
 
 bool UPathfindingManager::IsSolid(const FIntVector& Coord) const
 {

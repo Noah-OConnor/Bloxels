@@ -5,6 +5,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
+#include "Kismet/GameplayStatics.h"
 
 AFreeCameraPawn::AFreeCameraPawn()
 {
@@ -32,6 +33,12 @@ void AFreeCameraPawn::BeginPlay()
     {
         PC->bShowMouseCursor = false;
         PC->SetInputMode(FInputModeGameOnly());
+    }
+
+    VoxelWorld = Cast<AVoxelWorld>(UGameplayStatics::GetActorOfClass(GetWorld(), AVoxelWorld::StaticClass()));
+    if (!VoxelWorld)
+    {
+        UE_LOG(LogTemp, Error, TEXT("VoxelWorld not found in scene!"));
     }
 }
 
@@ -63,13 +70,54 @@ void AFreeCameraPawn::Tick(float DeltaTime)
 
 void AFreeCameraPawn::OnLeftClick()
 {
-    UE_LOG(LogTemp, Log, TEXT("OnLeftClick"));
+    if (!VoxelWorld) return;
+
+    FVector Start = Camera->GetComponentLocation();
+    FVector End = Start + Camera->GetForwardVector() * 10000.f;
+
+    FHitResult Hit;
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
+    {
+        FVector NormalOffset = Hit.ImpactNormal * -50.f; // One voxel outward
+        FVector HitPoint = Hit.ImpactPoint + NormalOffset;
+        FIntVector BlockCoord = FIntVector(FMath::FloorToInt(HitPoint.X / 100.f),
+                                           FMath::FloorToInt(HitPoint.Y / 100.f),
+                                           FMath::FloorToInt(HitPoint.Z / 100.f));
+
+        VoxelWorld->PlaceBlock(BlockCoord.X, BlockCoord.Y, BlockCoord.Z, 0); // Air
+        UE_LOG(LogTemp, Log, TEXT("Placed air at %s"), *BlockCoord.ToString());
+    }
 }
+
 
 void AFreeCameraPawn::OnRightClick()
 {
-    UE_LOG(LogTemp, Log, TEXT("OnRightClick"));
+    if (!VoxelWorld) return;
+
+    FVector Start = Camera->GetComponentLocation();
+    FVector End = Start + Camera->GetForwardVector() * 10000.f;
+
+    FHitResult Hit;
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
+    {
+        FVector NormalOffset = Hit.ImpactNormal * 50.f; // One voxel outward
+        FVector PlacePoint = Hit.ImpactPoint + NormalOffset;
+
+        FIntVector BlockCoord = FIntVector(FMath::FloorToInt(PlacePoint.X / 100.f),
+                                           FMath::FloorToInt(PlacePoint.Y / 100.f),
+                                           FMath::FloorToInt(PlacePoint.Z / 100.f));
+
+        VoxelWorld->PlaceBlock(BlockCoord.X, BlockCoord.Y, BlockCoord.Z, 1); // Block 0
+        UE_LOG(LogTemp, Log, TEXT("Placed block 1 at %s"), *BlockCoord.ToString());
+    }
 }
+
 
 void AFreeCameraPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {

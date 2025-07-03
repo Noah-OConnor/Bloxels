@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Bloxels/Voxel/World/VoxelWorld.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Pawn.h"
 #include "FreeCameraPawn.generated.h"
@@ -28,6 +29,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	class UFloatingPawnMovement* Movement;
+
+	UPROPERTY()
+	AVoxelWorld* VoxelWorld;
 
 	UFUNCTION()
 	void OnLeftClick();

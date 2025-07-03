@@ -76,10 +76,7 @@ public:
     EBiome GetBiome(int X, int Y) const;
     int GetTerrainHeight(int X, int Y, EBiome Biome) const;
     int16 GetVoxelAtWorldCoordinates(int X, int Y, int Z);
-
-    
     void TryCreateNewChunk(int32 ChunkX, int32 ChunkY, bool bShouldGenMesh);
-
 
 private:
     UPROPERTY()
