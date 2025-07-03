@@ -6,6 +6,7 @@
 #include "GameFramework/CheatManager.h"
 #include "BloxelsCheatManager.generated.h"
 
+class UDebugSubsystem;
 /**
  * 
  */
@@ -15,6 +16,7 @@ class BLOXELS_API UBloxelsCheatManager : public UCheatManager
 	GENERATED_BODY()
 
 public:
+	// Block Selection Commands
 	UFUNCTION(Exec)
 	void SelectPositionCoordinates(int32 Index, float X, float Y, float Z);
 
@@ -30,6 +32,25 @@ public:
 	UFUNCTION(Exec)
 	void ClearAllSelections();
 
+	// Pathfinding Commands
+	UFUNCTION(Exec)
+	void SetPathStartLookAt(bool bOffset = false);
+
+	UFUNCTION(Exec)
+	void SetPathEndLookAt(bool bOffset = false);
+
+	UFUNCTION(Exec)
+	void ClearPathStart();
+
+	UFUNCTION(Exec)
+	void ClearPathEnd();
+
 private:
+	// Block Selection Helpers
 	void SetPosition(int32 Index, const FVector& Pos);
+
+	// Pathfinding Helpers
+	FVector GetLookAt(bool bReturnNormal);
+
+	void GeneratePathDebug(UDebugSubsystem* Debug);
 };

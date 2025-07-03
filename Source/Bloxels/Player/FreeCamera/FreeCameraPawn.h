@@ -3,8 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Bloxels/Voxel/PathFinding/PathfindingComponent.h"
-#include "Bloxels/Voxel/PathFinding/PathfindingManager.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Pawn.h"
 #include "FreeCameraPawn.generated.h"
@@ -25,12 +23,6 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	UPROPERTY(EditAnywhere)
-	UPathfindingManager* PathManager;
-
-	UPROPERTY(VisibleAnywhere)
-	UPathfindingComponent* PathfindingComponent;
-	
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* Camera;
 
@@ -42,9 +34,6 @@ private:
 
 	UFUNCTION()
 	void OnRightClick();
-
-	FIntVector StartCoord;
-	FIntVector EndCoord;
 
 	// Movement input
 	FVector2D MoveInput;

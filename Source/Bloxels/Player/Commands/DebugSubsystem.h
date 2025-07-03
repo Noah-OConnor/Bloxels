@@ -3,14 +3,15 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Tickable.h"
-#include "SelectionDebugSubsystem.generated.h"
+#include "DebugSubsystem.generated.h"
 
 UCLASS()
-class BLOXELS_API USelectionDebugSubsystem : public UGameInstanceSubsystem, public FTickableGameObject
+class BLOXELS_API UDebugSubsystem : public UGameInstanceSubsystem, public FTickableGameObject
 {
     GENERATED_BODY()
 
 public:
+    // Area Selection
     FVector Position1;
     FVector Position2;
     FVector Position3;
@@ -21,6 +22,20 @@ public:
 
     void SetPosition(int32 Index, const FVector& InPos);
     void ClearSelection(int32 Index);
+    
+    // Pathfinding Selection
+    FIntVector PathStart;
+    FIntVector PathEnd;
+    TArray<FVector> DebugPath;
+    
+    bool bPathStartSet = false;
+    bool bPathEndSet = false;
+    bool bHasPath = false;
+
+    void SetPathCoord(bool bIsStart, const FVector& WorldPos);
+    void SetDebugPath(const TArray<FVector>& PathPoints);
+    void ClearPathCoord(bool bIsStart);
+    void ClearDebugPath();
 
     // FTickableGameObject interface
     virtual void Tick(float DeltaTime) override;

@@ -2,12 +2,9 @@
 
 #include "FreeCameraPawn.h"
 
-#include "EngineUtils.h"
-#include "Bloxels/Voxel/PathFinding/PathfindingSubsystem.h"
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
-#include "Kismet/GameplayStatics.h"
 
 AFreeCameraPawn::AFreeCameraPawn()
 {
@@ -20,8 +17,6 @@ AFreeCameraPawn::AFreeCameraPawn()
 
     Movement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("Movement"));
     Movement->MaxSpeed = 2000.f;
-
-    PathfindingComponent = CreateDefaultSubobject<UPathfindingComponent>(TEXT("PathfindingComponent"));
 }
 
 UCameraComponent* AFreeCameraPawn::GetCamera() const
@@ -37,14 +32,6 @@ void AFreeCameraPawn::BeginPlay()
     {
         PC->bShowMouseCursor = false;
         PC->SetInputMode(FInputModeGameOnly());
-    }
-    
-    UPathfindingSubsystem* Subsystem = GetGameInstance()->GetSubsystem<UPathfindingSubsystem>();
-    PathManager = Subsystem ? Subsystem->GetPathfindingManager() : nullptr;
-
-    if (PathManager)
-    {
-        PathfindingComponent->Initialize(PathManager);
     }
 }
 
@@ -77,81 +64,11 @@ void AFreeCameraPawn::Tick(float DeltaTime)
 void AFreeCameraPawn::OnLeftClick()
 {
     UE_LOG(LogTemp, Log, TEXT("OnLeftClick"));
-
-    if (!PathManager) return;
-    
-    const FVector Start = Camera->GetComponentLocation();
-    const FVector Dir = Camera->GetForwardVector();
-    const FVector End = Start + Dir * 10000.f;
-    
-    DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 2.f, 0, 1.f);
-    
-    if (FHitResult Hit; GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility))
-    {
-        const FVector HitLocation = Hit.ImpactPoint;
-        const FVector Normal = Hit.ImpactNormal;
-        FVector Adjusted = HitLocation;
-        
-        Adjusted += Normal * 50.f;  
-        
-    
-        StartCoord = FIntVector(
-            FMath::FloorToInt(Adjusted.X / 100.f) ,
-            FMath::FloorToInt(Adjusted.Y / 100.f) ,
-            FMath::FloorToInt(Adjusted.Z / 100.f)
-        );
-    
-        UE_LOG(LogTemp, Log, TEXT("Set START to %s"), *StartCoord.ToString());
-    }
 }
 
 void AFreeCameraPawn::OnRightClick()
 {
     UE_LOG(LogTemp, Log, TEXT("OnRightClick"));
-    
-    if (!PathManager || !PathfindingComponent) return;
-    
-    const FVector Start = Camera->GetComponentLocation();
-    const FVector Dir = Camera->GetForwardVector();
-    const FVector End = Start + Dir * 10000.f;
-    
-    DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 2.f, 0, 1.f);
-    
-    if (FHitResult Hit; GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility))
-    {
-        const FVector HitLocation = Hit.ImpactPoint;
-        const FVector Normal = Hit.ImpactNormal;
-        FVector Adjusted = HitLocation;
-    
-        if (Normal.Equals(FVector::UpVector, 0.1f))
-        {
-            Adjusted += FVector(0, 0, 50.f);
-        }
-        else
-        {
-            Adjusted += Normal * 50.f;
-        }
-    
-        EndCoord = FIntVector(
-            FMath::FloorToInt(Adjusted.X / 100.f),
-            FMath::FloorToInt(Adjusted.Y / 100.f),
-            FMath::FloorToInt(Adjusted.Z / 100.f)
-        );
-    
-        UE_LOG(LogTemp, Log, TEXT("Set END to %s"), *EndCoord.ToString());
-    
-        if (!StartCoord.IsZero())
-        {
-            PathfindingComponent->FindPath(StartCoord, EndCoord);
-            PathfindingComponent->DrawDebugPath(60.f);
-
-            FVector StartCenter = FVector(StartCoord) * 100.f + FVector(50.f);
-            DrawDebugBox(GetWorld(), StartCenter, FVector(50.f), FColor::Blue, false, 60.f, 0, 5.f);
-            
-            FVector EndCenter = FVector(EndCoord) * 100.f + FVector(50.f);
-            DrawDebugBox(GetWorld(), EndCenter, FVector(50.f), FColor::Red, false, 60.f, 0, 5.f);
-        }
-    }
 }
 
 void AFreeCameraPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
