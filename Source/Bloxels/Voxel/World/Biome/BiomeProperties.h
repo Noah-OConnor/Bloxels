@@ -14,6 +14,11 @@ struct FBiomeProperties : public FTableRowBase
 {
     GENERATED_BODY()
 
+    FBiomeProperties()
+        : BiomeType()
+        , Material()
+    {}
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EBiome BiomeType;
 

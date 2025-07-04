@@ -11,10 +11,16 @@ struct FSurfaceBlocks
 {
     GENERATED_BODY()
 
+    FSurfaceBlocks()
+        : VoxelType()
+        , BlocksFromSurface()
+        , NumBlocks()
+    {}
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     EVoxelType VoxelType;
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int blocksFromSurface; // 0 = Top Block
+    int BlocksFromSurface; // 0 = Top Block
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int numBlocks;
+    int NumBlocks;
 };

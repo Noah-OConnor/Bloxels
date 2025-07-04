@@ -8,6 +8,15 @@ struct FBiomeNoiseRanges
 {
     GENERATED_BODY()
 
+    FBiomeNoiseRanges()
+        : MinTemperature()
+        , MaxTemperature()
+        , MinHabitability()
+        , MaxHabitability()
+        , MinElevation()
+        , MaxElevation()
+    {}
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float MinTemperature;
 

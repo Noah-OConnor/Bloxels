@@ -11,6 +11,10 @@ struct FVoxelData
 {
 	GENERATED_BODY()
 
+	FVoxelData()
+		: VoxelType()
+	{}
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EVoxelType VoxelType;
 

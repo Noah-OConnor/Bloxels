@@ -11,6 +11,10 @@ struct FNoiseInfo
 {
 	GENERATED_BODY()
 
+	FNoiseInfo()
+		: NoiseCurve()
+	{}
+
 	// Noise Settings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Biome Noise Settings")
 	bool UseThisNoise = true;
