@@ -3,10 +3,12 @@
 
 #include "VoxelChunk.h"
 
-#include "EngineUtils.h"
-#include "VoxelGenerationTask.h"
-#include "VoxelMeshTask.h"
+#include <functional>
+
+#include "VoxelChunkAsync.h"
 #include "Bloxels/Voxel/PathFinding/PathfindingManager.h"
+#include "Bloxels/Voxel/World/Biome/BiomeProperties.h"
+#include "Tasks/Task.h"
 
 
 AVoxelChunk::AVoxelChunk()
@@ -30,10 +32,9 @@ void AVoxelChunk::InitializeChunk(AVoxelWorld* InVoxelWorld, int32 ChunkX, int32
 
 void AVoxelChunk::GenerateChunkDataAsync()
 {
-	TWeakObjectPtr<AVoxelChunk> WeakThis(this);
+	TWeakObjectPtr<AVoxelChunk> WeakChunk(this);
 	TWeakObjectPtr<AVoxelWorld> WeakWorld(VoxelWorld);
-	const auto AsyncTraceTask = new FAutoDeleteAsyncTask<FVoxelGenerationTask>(ChunkCoords.X, ChunkCoords.Y, WeakWorld, WeakThis);
-	AsyncTraceTask->StartBackgroundTask();
+	VoxelChunkAsync::GenerateChunkDataAsync(WeakChunk, WeakWorld, ChunkCoords);
 }
 
 void AVoxelChunk::OnChunkDataGenerated(TArray<uint16> InVoxelData)
@@ -103,7 +104,7 @@ void AVoxelChunk::TryGenerateChunkMesh()
             bAllGenerated = false;
         }
 
-        // If NeighborChunk doesnt already exist, then we need to create it
+        // If NeighborChunk doesn't already exist, then we need to create it
         if (NeighborChunk == nullptr)
         {
             bAllGenerated = false;
@@ -115,7 +116,7 @@ void AVoxelChunk::TryGenerateChunkMesh()
 
         if (NeighborChunk != nullptr)
         {
-            // If neighborchunk doesnt already have data, subscribe to get notified when it finishes
+            // If neighbor chunk doesn't already have data, subscribe to get notified when it finishes
             if (!NeighborChunk->bHasData)
             {
                 bAllGenerated = false;
@@ -139,25 +140,20 @@ void AVoxelChunk::TryGenerateChunkMesh()
 
 void AVoxelChunk::GenerateChunkMeshAsync()
 {
-	if (!bGenerateMesh)
+	if (!bGenerateMesh || !bHasData)
 	{
-		UE_LOG(LogTemp, Error, TEXT("CALLED GENERATE CHUNK ASYNC BUT CHUNK IS NOT MARKED FOR GENERATION"));
+		UE_LOG(LogTemp, Error, TEXT("Invalid mesh generation call"));
 		return;
 	}
 
-	if (!bHasData)
-	{
-		UE_LOG(LogTemp, Error, TEXT("CALLED GENERATE CHUNK ASYNC EVEN THOUGH WE DONT HAVE DATA YET"));
-		return;
-	}
+	TWeakObjectPtr<AVoxelChunk> WeakChunk(this);
+	TWeakObjectPtr<AVoxelWorld> WeakWorld(VoxelWorld);
+    TArray<uint16>& VoxelDataCopy = VoxelData;
+	const FIntPoint ChunkCoordsCopy = ChunkCoords;
 
-	//UE_LOG(LogTemp, Warning, TEXT("CALLED GENERATE CHUNK ASYNC"));
-	TWeakObjectPtr<AVoxelChunk> WeakThis(this);
-	TWeakObjectPtr<AVoxelWorld> WeakVoxelWorld(VoxelWorld);
-	const auto AsyncTraceTask =
-		new FAutoDeleteAsyncTask<FVoxelMeshTask>(VoxelData, ChunkCoords, WeakVoxelWorld, WeakThis);
-	AsyncTraceTask->StartBackgroundTask();
+	VoxelChunkAsync::GenerateChunkMeshAsync(WeakChunk, WeakWorld, VoxelDataCopy, ChunkCoordsCopy);
 }
+
 
 void AVoxelChunk::OnMeshGenerated(const TMap<FMeshSectionKey, FMeshData>& InMeshSections)
 {
@@ -257,7 +253,7 @@ bool AVoxelChunk::IsVoxelInChunk(int X, int Y, int Z) const
         Z >= 0 && Z < VoxelWorld->ChunkHeight);
 }
 
-/// <returns>Returns true when voxel is transparent or outside of the chunk</returns>
+/// <returns>Returns true when voxel is transparent or outside the chunk</returns>
 bool AVoxelChunk::CheckVoxel(int X, int Y, int Z, FIntPoint ChunkCoord)
 {
     if (!IsValid(VoxelWorld)) return false;
@@ -280,4 +276,29 @@ bool AVoxelChunk::CheckVoxel(int X, int Y, int Z, FIntPoint ChunkCoord)
 void AVoxelChunk::SetChunkCoords(FIntPoint InCoords)
 {
     ChunkCoords = InCoords;
+}
+
+uint16 AVoxelChunk::GetVoxelTypeForPosition(const int Z, const int TerrainHeight, const FBiomeProperties* BiomeData)
+{
+    constexpr uint16 Stone = 1;
+
+    if (Z < 2)
+    {
+        constexpr uint16 Obsidian = 4;
+        return Obsidian;
+    }
+
+    if (BiomeData && BiomeData->SurfaceBlocks.Num() > 0)
+    {
+        for (const auto& [VoxelType, BlocksFromSurface, NumBlocks] : BiomeData->SurfaceBlocks)
+        {
+            const int Bottom = TerrainHeight - BlocksFromSurface - NumBlocks;
+            if (const int Top = TerrainHeight - BlocksFromSurface; Z >= Bottom && Z <= Top)
+            {
+                return static_cast<uint16>(VoxelType);
+            }
+        }
+    }
+
+    return Stone;
 }

@@ -42,7 +42,7 @@ public:
 
 	void SetChunkCoords(FIntPoint InCoords);
 
-	
+
 	// BOOLS
 	bool bGenerateMesh = false;
 	bool bHasData = false;
@@ -70,4 +70,6 @@ private:
 	void GenerateChunkMeshAsync();
 	
 	void DisplayMesh();
+	
+	static uint16 GetVoxelTypeForPosition(int Z, int TerrainHeight, const FBiomeProperties* BiomeData);
 };

@@ -396,27 +396,28 @@ FVoxelData AVoxelWorld::VoxelProperties[UINT16_MAX] = {};
 
 int16 AVoxelWorld::GetVoxelAtWorldCoordinates(int X, int Y, int Z)
 {
-    // if the bottom of the world, don't generate the face
     if (Z < 0)
     {
-        return 1;
+        return 1; // Bedrock
     }
 
     const int ChunkX = FMath::FloorToInt(static_cast<float>(X) / ChunkSize);
     const int ChunkY = FMath::FloorToInt(static_cast<float>(Y) / ChunkSize);
-
     const int LocalX = (X % ChunkSize + ChunkSize) % ChunkSize;
     const int LocalY = (Y % ChunkSize + ChunkSize) % ChunkSize;
 
-    if (const FIntPoint ChunkCoord(ChunkX, ChunkY); Chunks.Contains(ChunkCoord))
+    ChunksLock.ReadLock(); 
+    TWeakObjectPtr<AVoxelChunk> Chunk;
+    if (Chunks.Contains(FIntPoint(ChunkX, ChunkY)))
     {
-        AVoxelChunk* Chunk = Chunks[ChunkCoord];
-        if (Chunk->IsVoxelInChunk(LocalX, LocalY, Z))
-        {
-            return Chunk->VoxelData[(Z * ChunkSize * ChunkSize) + (LocalY * ChunkSize) + LocalX];
-        }
+        Chunk = Chunks[FIntPoint(ChunkX, ChunkY)];
+    }
+    ChunksLock.ReadUnlock();
+
+    if (Chunk.IsValid() && Chunk->IsVoxelInChunk(LocalX, LocalY, Z))
+    {
+        return Chunk->VoxelData[(Z * ChunkSize * ChunkSize) + (LocalY * ChunkSize) + LocalX];
     }
 
-    // Return a default value (e.g., air) if the chunk or voxel is not found
-    return 0;
+    return 0; // Air
 }
