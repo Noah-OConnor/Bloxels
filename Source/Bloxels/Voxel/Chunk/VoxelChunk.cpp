@@ -3,11 +3,7 @@
 
 #include "VoxelChunk.h"
 
-#include <functional>
-
 #include "VoxelChunkAsync.h"
-#include "Bloxels/Voxel/PathFinding/PathfindingManager.h"
-#include "Bloxels/Voxel/World/Biome/BiomeProperties.h"
 #include "Tasks/Task.h"
 
 
@@ -74,9 +70,9 @@ void AVoxelChunk::TryGenerateChunkMesh()
         return;
     }
 
-    if (!VoxelWorld->VoxelProperties)
+    if (!VoxelWorld->GetVoxelRegistry())
     {
-        UE_LOG(LogTemp, Error, TEXT("VoxelProperties is null"));
+        UE_LOG(LogTemp, Error, TEXT("Voxel Registry is null"));
         return;
     }
 
@@ -148,7 +144,7 @@ void AVoxelChunk::GenerateChunkMeshAsync()
 
 	TWeakObjectPtr<AVoxelChunk> WeakChunk(this);
 	TWeakObjectPtr<AVoxelWorld> WeakWorld(VoxelWorld);
-    TArray<uint16>& VoxelDataCopy = VoxelData;
+    TArray<uint16> VoxelDataCopy = VoxelData;
 	const FIntPoint ChunkCoordsCopy = ChunkCoords;
 
 	VoxelChunkAsync::GenerateChunkMeshAsync(WeakChunk, WeakWorld, VoxelDataCopy, ChunkCoordsCopy);
@@ -194,25 +190,25 @@ void AVoxelChunk::DisplayMesh()
                SectionIndex, MeshData.Vertices, MeshData.Triangles, MeshData.Normals,  
                MeshData.UVs, TArray<FColor>(), TArray<FProcMeshTangent>(), true);  
 
-           UMaterialInterface* BaseMaterial = VoxelWorld->VoxelProperties[SectionKey.VoxelType].Material;
+           UMaterialInterface* BaseMaterial = VoxelWorld->GetVoxelRegistry()->GetVoxelByID(SectionKey.VoxelType)->Material;
            // Check if the material is a dynamic material instance and set the TileCountX parameter  
 
            if (UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(BaseMaterial, this))
            {  
                if (SectionKey.Normal.Z == 0)
                {
-                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetX"), VoxelWorld->VoxelProperties[SectionKey.VoxelType].SideTileOffset.X);
-                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetY"), VoxelWorld->VoxelProperties[SectionKey.VoxelType].SideTileOffset.Y);
+                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetX"), VoxelWorld->GetVoxelRegistry()->GetVoxelByID(SectionKey.VoxelType)->SideTileOffset.X);
+                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetY"), VoxelWorld->GetVoxelRegistry()->GetVoxelByID(SectionKey.VoxelType)->SideTileOffset.Y);
                }
                else if (SectionKey.Normal.Z == 1)
                {
-                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetX"), VoxelWorld->VoxelProperties[SectionKey.VoxelType].TopTileOffset.X);
-                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetY"), VoxelWorld->VoxelProperties[SectionKey.VoxelType].TopTileOffset.Y);
+                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetX"), VoxelWorld->GetVoxelRegistry()->GetVoxelByID(SectionKey.VoxelType)->TopTileOffset.X);
+                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetY"), VoxelWorld->GetVoxelRegistry()->GetVoxelByID(SectionKey.VoxelType)->TopTileOffset.Y);
                }
                else if (SectionKey.Normal.Z == -1)
                {
-                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetX"), VoxelWorld->VoxelProperties[SectionKey.VoxelType].BottomTileOffset.X);
-                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetY"), VoxelWorld->VoxelProperties[SectionKey.VoxelType].BottomTileOffset.Y);
+                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetX"), VoxelWorld->GetVoxelRegistry()->GetVoxelByID(SectionKey.VoxelType)->BottomTileOffset.X);
+                   MaterialInstance->SetScalarParameterValue(TEXT("TileOffsetY"), VoxelWorld->GetVoxelRegistry()->GetVoxelByID(SectionKey.VoxelType)->BottomTileOffset.Y);
                }
 
                // Set the material for the section  
@@ -261,7 +257,7 @@ bool AVoxelChunk::CheckVoxel(int X, int Y, int Z, FIntPoint ChunkCoord)
     {
         if (!IsValid(VoxelWorld)) return false;
         int16 NeighborType = VoxelData[(Z * VoxelWorld->ChunkSize * VoxelWorld->ChunkSize) + (Y * VoxelWorld->ChunkSize) + X];
-        return AVoxelWorld::VoxelProperties[NeighborType].bIsTransparent;
+        return VoxelWorld->GetVoxelRegistry()->GetVoxelByID(NeighborType)->bIsTransparent;
     }
     else
     {
@@ -269,36 +265,11 @@ bool AVoxelChunk::CheckVoxel(int X, int Y, int Z, FIntPoint ChunkCoord)
         int WorldX = ChunkCoord.X * VoxelWorld->ChunkSize + X;
         int WorldY = ChunkCoord.Y * VoxelWorld->ChunkSize + Y;
         int16 NeighborType = VoxelWorld->GetVoxelAtWorldCoordinates(WorldX, WorldY, Z);
-        return AVoxelWorld::VoxelProperties[NeighborType].bIsTransparent;
+        return VoxelWorld->GetVoxelRegistry()->GetVoxelByID(NeighborType)->bIsTransparent;
     }
 }
 
 void AVoxelChunk::SetChunkCoords(FIntPoint InCoords)
 {
     ChunkCoords = InCoords;
-}
-
-uint16 AVoxelChunk::GetVoxelTypeForPosition(const int Z, const int TerrainHeight, const FBiomeProperties* BiomeData)
-{
-    constexpr uint16 Stone = 1;
-
-    if (Z < 2)
-    {
-        constexpr uint16 Obsidian = 4;
-        return Obsidian;
-    }
-
-    if (BiomeData && BiomeData->SurfaceBlocks.Num() > 0)
-    {
-        for (const auto& [VoxelType, BlocksFromSurface, NumBlocks] : BiomeData->SurfaceBlocks)
-        {
-            const int Bottom = TerrainHeight - BlocksFromSurface - NumBlocks;
-            if (const int Top = TerrainHeight - BlocksFromSurface; Z >= Bottom && Z <= Top)
-            {
-                return static_cast<uint16>(VoxelType);
-            }
-        }
-    }
-
-    return Stone;
 }

@@ -6,7 +6,7 @@
 #include "FastNoiseWrapper.h"
 #include "Biome/Biome.h"
 #include "Biome/NoiseInfo.h"
-#include "Bloxels/Voxel/Core/VoxelInfo.h"
+#include "Bloxels/Voxel/VoxelRegistry/VoxelRegistry.h"
 #include "Engine/TriggerVolume.h"
 #include "GameFramework/Actor.h"
 #include "VoxelWorld.generated.h"
@@ -24,9 +24,6 @@ public:
     AVoxelWorld();
 
     virtual void BeginPlay() override;
-    
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Data")
-    UVoxelInfo* VoxelInfoDataAsset;
     
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Data")
     UDataTable* BiomeDataTable;
@@ -68,7 +65,6 @@ public:
 
     
     const FBiomeProperties* GetBiomeData(EBiome Biome) const;
-    static FVoxelData VoxelProperties[UINT16_MAX];
     
     mutable FRWLock ChunksLock;
     mutable FRWLock ActiveChunksLock;
@@ -76,6 +72,7 @@ public:
     EBiome GetBiome(int X, int Y) const;
     int GetTerrainHeight(int X, int Y, EBiome Biome) const;
     int16 GetVoxelAtWorldCoordinates(int X, int Y, int Z);
+    UVoxelRegistry* GetVoxelRegistry() const;
     void TryCreateNewChunk(int32 ChunkX, int32 ChunkY, bool bShouldGenMesh);
 
 private:
@@ -97,8 +94,8 @@ private:
     bool bIsShuttingDown = false;
 
     void InitializeTriggerVolume();
-    void InitializeVoxelProperties() const;
     void InitializeNoiseLayers();
+    void DelayedGenerateWorld();
     void GenerateInitialWorld();
     void InitializePlayer();
     void UpdateTriggerVolume(FVector PlayerPosition) const;

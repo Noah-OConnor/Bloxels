@@ -28,7 +28,7 @@ public:
 	
 	void InitializeChunk(AVoxelWorld* InVoxelWorld, int32 ChunkX, int32 ChunkY, bool bShouldGenMesh);
 
-	void OnChunkDataGenerated(TArray<uint16> VoxelData);
+	void OnChunkDataGenerated(TArray<uint16> InVoxelData);
 
 	void TryGenerateChunkMesh();
 
@@ -71,5 +71,5 @@ private:
 	
 	void DisplayMesh();
 	
-	static uint16 GetVoxelTypeForPosition(int Z, int TerrainHeight, const FBiomeProperties* BiomeData);
+	uint16 GetVoxelTypeForPosition(int Z, int TerrainHeight, const FBiomeProperties* BiomeData) const;
 };

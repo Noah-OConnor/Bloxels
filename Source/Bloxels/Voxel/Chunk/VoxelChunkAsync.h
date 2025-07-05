@@ -14,13 +14,13 @@ namespace VoxelChunkAsync
     // Chunk Data Generation
     void GenerateChunkDataAsync(TWeakObjectPtr<AVoxelChunk> Chunk, TWeakObjectPtr<AVoxelWorld> World, FIntPoint ChunkCoords);
     
-    uint16 GetVoxelTypeForPosition(const int Z, const int TerrainHeight, const FBiomeProperties* BiomeData);
+    FName GetVoxelTypeForPosition(const int Z, const int TerrainHeight, const FBiomeProperties* BiomeData);
 
     // Chunk Mesh Generation
     void GenerateChunkMeshAsync(
         TWeakObjectPtr<AVoxelChunk> Chunk,
         TWeakObjectPtr<AVoxelWorld> World,
-        TArray<uint16>& VoxelDataCopy,
+        const TArray<uint16>& VoxelDataCopy,
         FIntPoint ChunkCoords);
     
     int32 GetIndex(int X, int Y, int Z, int ChunkSize);

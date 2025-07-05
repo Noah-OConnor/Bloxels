@@ -3,20 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "VoxelTypes.h"
 #include "VoxelData.generated.h"
 
-USTRUCT(BlueprintType)
-struct FVoxelData
+UCLASS(BlueprintType)
+class BLOXELS_API UVoxelData : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 
-	FVoxelData()
-		: VoxelType()
-	{}
-
+public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EVoxelType VoxelType;
+	FName VoxelID;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsSolid = false;

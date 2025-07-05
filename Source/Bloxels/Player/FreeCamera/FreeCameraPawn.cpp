@@ -87,7 +87,7 @@ void AFreeCameraPawn::OnLeftClick()
                                            FMath::FloorToInt(HitPoint.Y / 100.f),
                                            FMath::FloorToInt(HitPoint.Z / 100.f));
 
-        VoxelWorld->PlaceBlock(BlockCoord.X, BlockCoord.Y, BlockCoord.Z, 0); // Air
+        VoxelWorld->PlaceBlock(BlockCoord.X, BlockCoord.Y, BlockCoord.Z, VoxelWorld->GetVoxelRegistry()->GetIDFromName(FName("Air"))); // Air
         UE_LOG(LogTemp, Log, TEXT("Placed air at %s"), *BlockCoord.ToString());
     }
 }

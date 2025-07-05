@@ -132,7 +132,7 @@ bool UPathfindingManager::IsAir(const FIntVector& Coord) const
     if (!VoxelWorld) return false;
     
     uint16 Voxel = VoxelWorld->GetVoxelAtWorldCoordinates(Coord.X, Coord.Y, Coord.Z);
-    return VoxelWorld->VoxelProperties[Voxel].VoxelType == EVoxelType::Air;
+    return VoxelWorld->GetVoxelRegistry()->GetVoxelByID(Voxel)->VoxelID == FName("Air");
 }
 
 void UPathfindingManager::SetVoxelWorld(AVoxelWorld* InWorld)
@@ -220,5 +220,5 @@ bool UPathfindingManager::IsSolid(const FIntVector& Coord) const
     if (!VoxelWorld) return false;
     
     uint16 Voxel = VoxelWorld->GetVoxelAtWorldCoordinates(Coord.X, Coord.Y, Coord.Z);
-    return VoxelWorld->VoxelProperties[Voxel].bIsSolid;
+    return VoxelWorld->GetVoxelRegistry()->GetVoxelByID(Voxel)->bIsSolid;
 }

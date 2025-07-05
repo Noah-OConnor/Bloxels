@@ -4,7 +4,7 @@
 #include "DrawDebugHelpers.h"
 #include "Biome/BiomeProperties.h"
 #include "Bloxels/Voxel/Chunk/VoxelChunk.h"
-#include "Bloxels/Voxel/Core/VoxelInfo.h"
+#include "Bloxels/Voxel/VoxelRegistry/VoxelRegistry.h"
 #include "Components/BrushComponent.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -18,9 +18,10 @@ void AVoxelWorld::BeginPlay()
     Super::BeginPlay();
 
     InitializeNoiseLayers();
-    InitializeVoxelProperties();
 
-    GenerateInitialWorld();
+    FTimerHandle DelayWorldGenTimer;
+    GetWorldTimerManager().SetTimer(DelayWorldGenTimer, this, &AVoxelWorld::DelayedGenerateWorld, 0.1f, false);
+
     InitializePlayer();
     InitializeTriggerVolume();
 }
@@ -52,28 +53,21 @@ void AVoxelWorld::InitializeNoiseLayers()
     ElevationNoise->SetSeed(Elevation.NoiseSeed);
 }
 
-void AVoxelWorld::InitializeVoxelProperties() const
+void AVoxelWorld::DelayedGenerateWorld()
 {
-    if (!VoxelInfoDataAsset)
+    // Ensure voxel registry is ready
+    UVoxelRegistry* Registry = GetVoxelRegistry();
+    if (!Registry || Registry->VoxelAssets.Num() == 0)
     {
-        UE_LOG(LogTemp, Error, TEXT("VoxelInfoDataAsset is not assigned or failed to load."));
+        UE_LOG(LogTemp, Warning, TEXT("VoxelRegistry not ready, delaying again..."));
+        FTimerHandle RetryTimer;
+        GetWorldTimerManager().SetTimer(RetryTimer, this, &AVoxelWorld::DelayedGenerateWorld, 0.1f, false);
         return;
     }
 
-    for (const FVoxelData& Entry : VoxelInfoDataAsset->VoxelData)
-    {
-        uint16 VoxelIndex = static_cast<uint16>(Entry.VoxelType);
-        if (VoxelIndex >= UINT16_MAX) continue;
-
-        VoxelProperties[VoxelIndex] = Entry;
-
-        UE_LOG(LogTemp, Log, TEXT("Loaded VoxelType %d - Solid: %s, Transparent: %s"),
-            VoxelIndex,
-            Entry.bIsSolid ? TEXT("True") : TEXT("False"),
-            Entry.bIsTransparent ? TEXT("True") : TEXT("False"));
-    }
+    //UE_LOG(LogTemp, Warning, TEXT("VoxelRegistry ready. Generating initial world."));
+    GenerateInitialWorld();
 }
-
 
 void AVoxelWorld::GenerateInitialWorld()
 {
@@ -392,8 +386,6 @@ const FBiomeProperties* AVoxelWorld::GetBiomeData(EBiome Biome) const
     return nullptr;
 }
 
-FVoxelData AVoxelWorld::VoxelProperties[UINT16_MAX] = {};
-
 int16 AVoxelWorld::GetVoxelAtWorldCoordinates(int X, int Y, int Z)
 {
     if (Z < 0)
@@ -419,5 +411,10 @@ int16 AVoxelWorld::GetVoxelAtWorldCoordinates(int X, int Y, int Z)
         return Chunk->VoxelData[(Z * ChunkSize * ChunkSize) + (LocalY * ChunkSize) + LocalX];
     }
 
-    return 0; // Air
+    return GetVoxelRegistry()->GetIDFromName(FName("Air")); // Air
+}
+
+UVoxelRegistry* AVoxelWorld::GetVoxelRegistry() const
+{
+    return GetGameInstance()->GetSubsystem<UVoxelRegistry>();
 }

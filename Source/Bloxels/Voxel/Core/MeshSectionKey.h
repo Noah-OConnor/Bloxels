@@ -7,7 +7,7 @@
 
 struct FMeshSectionKey
 {
-    int16 VoxelType;
+    uint16 VoxelType;
     FVector Normal;
 
     FMeshSectionKey()

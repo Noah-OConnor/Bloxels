@@ -23,6 +23,10 @@ namespace VoxelChunkAsync
             TArray<uint16> VoxelData;
             VoxelData.SetNum(ChunkSize * ChunkSize * ChunkHeight);
 
+        	// INITIALIZE ALL VOXELS TO AIR
+        	const uint16 AirID = World->GetVoxelRegistry()->GetIDFromName("Air");
+			VoxelData.Init(AirID, ChunkSize * ChunkSize * ChunkHeight);
+
             for (int x = 0; x < ChunkSize; ++x)
             {
                 for (int y = 0; y < ChunkSize; ++y)
@@ -37,7 +41,7 @@ namespace VoxelChunkAsync
                     for (int z = 0; z < TerrainHeight; ++z)
                     {
                         int Index = (z * ChunkSize * ChunkSize) + (y * ChunkSize) + x;
-                        VoxelData[Index] = GetVoxelTypeForPosition(z, TerrainHeight, BiomeData);
+                        VoxelData[Index] = World->GetVoxelRegistry()->GetIDFromName(GetVoxelTypeForPosition(z, TerrainHeight, BiomeData));
                     }
                 }
             }
@@ -52,13 +56,13 @@ namespace VoxelChunkAsync
         });
     }
     
-    uint16 GetVoxelTypeForPosition(const int Z, const int TerrainHeight, const FBiomeProperties* BiomeData)
+    FName GetVoxelTypeForPosition(const int Z, const int TerrainHeight, const FBiomeProperties* BiomeData)
     {
-        constexpr uint16 Stone = 1;
-
+        const FName Stone = FName("Stone");
+        const FName Obsidian = FName("Obsidian");
+    	
         if (Z < 2)
         {
-            constexpr uint16 Obsidian = 4;
             return Obsidian;
         }
 
@@ -69,7 +73,7 @@ namespace VoxelChunkAsync
                 const int Bottom = TerrainHeight - BlocksFromSurface - NumBlocks;
                 if (const int Top = TerrainHeight - BlocksFromSurface; Z >= Bottom && Z <= Top)
                 {
-                    return static_cast<uint16>(VoxelType);
+                    return VoxelType;
                 }
             }
         }
@@ -80,14 +84,14 @@ namespace VoxelChunkAsync
 	void GenerateChunkMeshAsync(
 		TWeakObjectPtr<AVoxelChunk> Chunk,
 		TWeakObjectPtr<AVoxelWorld> World,
-		TArray<uint16>& VoxelDataCopy,
+		const TArray<uint16>& VoxelDataCopy,
 		FIntPoint ChunkCoords)
 	{
-		UE::Tasks::Launch(TEXT("VoxelMeshTask"), [=, &VoxelDataCopy]()
+		UE::Tasks::Launch(TEXT("VoxelMeshTask"), [=]()
 		{
 			if (!Chunk.IsValid() || !World.IsValid())
 				return;
-
+			
 			const int ChunkSize = World->ChunkSize;
 			const int ChunkHeight = World->ChunkHeight;
 
@@ -297,7 +301,9 @@ namespace VoxelChunkAsync
     				if (Index < 0 || Index >= VoxelData.Num()) continue;
 
     				const int16 VoxelType = VoxelData[Index];
-    				if (World->VoxelProperties[VoxelType].bIsSolid && IsNeighborVisible(A, B, P))
+    				const UVoxelData* Voxel = World->GetVoxelRegistry()->GetVoxelByID(VoxelType);
+
+    				if (Voxel && Voxel->bIsSolid && IsNeighborVisible(A, B, P))
     				{
     					Mask[A][B] = { VoxelType, true };
     				}
