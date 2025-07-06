@@ -12,7 +12,7 @@ class AVoxelChunk;
 namespace VoxelChunkAsync
 {
     // Chunk Data Generation
-    void GenerateChunkDataAsync(TWeakObjectPtr<AVoxelChunk> Chunk, TWeakObjectPtr<AVoxelWorld> World, FIntPoint ChunkCoords);
+    void GenerateChunkDataAsync(TWeakObjectPtr<AVoxelChunk> Chunk, TWeakObjectPtr<AVoxelWorld> World, FIntVector ChunkCoords);
     
     FName GetVoxelTypeForPosition(const int Z, const int TerrainHeight, const FBiomeProperties* BiomeData);
 
@@ -21,11 +21,11 @@ namespace VoxelChunkAsync
         TWeakObjectPtr<AVoxelChunk> Chunk,
         TWeakObjectPtr<AVoxelWorld> World,
         const TArray<uint16>& VoxelDataCopy,
-        FIntPoint ChunkCoords);
+        FIntVector ChunkCoords);
     
     int32 GetIndex(int X, int Y, int Z, int ChunkSize);
     
-    bool CheckVoxel(const TWeakObjectPtr<AVoxelChunk>& Chunk, FIntPoint ChunkCoords, int X, int Y, int Z);
+    bool CheckVoxel(const TWeakObjectPtr<AVoxelChunk>& Chunk, FIntVector ChunkCoords, int X, int Y, int Z);
     
     void AddMergedFace(
         const TWeakObjectPtr<AVoxelChunk>& Chunk,

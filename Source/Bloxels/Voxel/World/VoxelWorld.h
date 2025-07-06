@@ -38,9 +38,6 @@ public:
     int32 ChunkSize = 16;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|World Generation")
-    int32 ChunkHeight = 32;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|World Generation")
     ATriggerVolume* ChunkTriggerVolume = nullptr;
 
     // Biome Noise Settings
@@ -58,10 +55,10 @@ public:
 
     
     UPROPERTY()
-    TMap<FIntPoint, AVoxelChunk*> Chunks;
+    TMap<FIntVector, AVoxelChunk*> Chunks;
 
     UPROPERTY()
-    TMap<FIntPoint, AVoxelChunk*> ActiveChunks;
+    TMap<FIntVector, AVoxelChunk*> ActiveChunks;
 
     
     const FBiomeProperties* GetBiomeData(EBiome Biome) const;
@@ -73,7 +70,7 @@ public:
     int GetTerrainHeight(int X, int Y, EBiome Biome) const;
     int16 GetVoxelAtWorldCoordinates(int X, int Y, int Z);
     UVoxelRegistry* GetVoxelRegistry() const;
-    void TryCreateNewChunk(int32 ChunkX, int32 ChunkY, bool bShouldGenMesh);
+    void TryCreateNewChunk(int32 ChunkX, int32 ChunkY, int32 ChunkZ, bool bShouldGenMesh);
 
 private:
     UPROPERTY()
@@ -89,8 +86,8 @@ private:
     UFUNCTION()
     void OnChunkExit(AActor* OverlappedActor, AActor* OtherActor);
     
-    FIntPoint CurrentChunk = 0;
-    FIntPoint PreviousChunk = 0;
+    FIntVector CurrentChunk = FIntVector(0, 0, 0);
+    FIntVector PreviousChunk = FIntVector(0, 0, 0);
     bool bIsShuttingDown = false;
 
     void InitializeTriggerVolume();

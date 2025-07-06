@@ -146,7 +146,7 @@ void UBloxelsCheatManager::ImportStructure(const FString& FileName)
     const TArray<TSharedPtr<FJsonValue>> Voxels = Root->GetArrayField(TEXT("Voxels"));
     UE_LOG(LogTemp, Log, TEXT("ImportStructure: Found %d voxel entries"), Voxels.Num());
 
-    TSet<FIntPoint> AffectedChunks;
+    TSet<FIntVector> AffectedChunks;
     
     int32 ImportedCount = 0;
 
@@ -186,16 +186,17 @@ void UBloxelsCheatManager::ImportStructure(const FString& FileName)
         World->PlaceBlock(WorldVoxelPos.X - 1, WorldVoxelPos.Y - 1, WorldVoxelPos.Z - 1, BlockID);
 
         // Track affected chunk
-        FIntPoint ChunkCoord(
+        FIntVector ChunkCoord(
             FMath::FloorToInt((float)WorldVoxelPos.X / World->ChunkSize),
-            FMath::FloorToInt((float)WorldVoxelPos.Y / World->ChunkSize)
+            FMath::FloorToInt((float)WorldVoxelPos.Y / World->ChunkSize),
+            FMath::FloorToInt((float)WorldVoxelPos.Z / World->ChunkSize)
         );
         AffectedChunks.Add(ChunkCoord);
         ImportedCount++;
     }
 
     // Regenerate all affected chunks
-    for (const FIntPoint& Coord : AffectedChunks)
+    for (const FIntVector& Coord : AffectedChunks)
     {
         if (World->Chunks.Contains(Coord))
         {

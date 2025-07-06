@@ -9,23 +9,22 @@
 
 namespace VoxelChunkAsync
 {
-    void GenerateChunkDataAsync(TWeakObjectPtr<AVoxelChunk> Chunk, TWeakObjectPtr<AVoxelWorld> World, FIntPoint ChunkCoords)
+    void GenerateChunkDataAsync(TWeakObjectPtr<AVoxelChunk> Chunk, TWeakObjectPtr<AVoxelWorld> World, FIntVector ChunkCoords)
     {
         UE::Tasks::Launch(TEXT("VoxelGen"), [Chunk, World, ChunkCoords]()
         {
             if (!Chunk.IsValid() || !World.IsValid()) return;
 
             const int32 ChunkSize = World->ChunkSize;
-            const int32 ChunkHeight = World->ChunkHeight;
             const int32 ChunkX = ChunkCoords.X;
             const int32 ChunkY = ChunkCoords.Y;
 
             TArray<uint16> VoxelData;
-            VoxelData.SetNum(ChunkSize * ChunkSize * ChunkHeight);
+            VoxelData.SetNum(ChunkSize * ChunkSize * ChunkSize);
 
         	// INITIALIZE ALL VOXELS TO AIR
         	const uint16 AirID = World->GetVoxelRegistry()->GetIDFromName("Air");
-			VoxelData.Init(AirID, ChunkSize * ChunkSize * ChunkHeight);
+			VoxelData.Init(AirID, ChunkSize * ChunkSize * ChunkSize);
 
             for (int x = 0; x < ChunkSize; ++x)
             {
@@ -85,7 +84,7 @@ namespace VoxelChunkAsync
 		TWeakObjectPtr<AVoxelChunk> Chunk,
 		TWeakObjectPtr<AVoxelWorld> World,
 		const TArray<uint16>& VoxelDataCopy,
-		FIntPoint ChunkCoords)
+		FIntVector ChunkCoords)
 	{
 		UE::Tasks::Launch(TEXT("VoxelMeshTask"), [=]()
 		{
@@ -93,14 +92,13 @@ namespace VoxelChunkAsync
 				return;
 			
 			const int ChunkSize = World->ChunkSize;
-			const int ChunkHeight = World->ChunkHeight;
 
 			TMap<FMeshSectionKey, FMeshData> MeshSections;
 
 			// +Z (Top)
 			ProcessFace(
 				Chunk, World, MeshSections, VoxelDataCopy,
-				ChunkHeight, ChunkSize, ChunkSize,
+				ChunkSize, ChunkSize, ChunkSize,
 				FVector(0, 0, 1),
 				[&](int x, int y, int z) { return GetIndex(x, y, z, ChunkSize); },
 				[&](int x, int y, int z) { return CheckVoxel(Chunk, ChunkCoords, x, y, z + 1); },
@@ -110,7 +108,7 @@ namespace VoxelChunkAsync
 			// -Z (Bottom)
 			ProcessFace(
 				Chunk, World, MeshSections, VoxelDataCopy,
-				ChunkHeight, ChunkSize, ChunkSize,
+				ChunkSize, ChunkSize, ChunkSize,
 				FVector(0, 0, -1),
 				[&](int x, int y, int z) { return GetIndex(x, y, z, ChunkSize); },
 				[&](int x, int y, int z) { return CheckVoxel(Chunk, ChunkCoords, x, y, z - 1); },
@@ -120,7 +118,7 @@ namespace VoxelChunkAsync
 			// +Y (Front)
 			ProcessFace(
 				Chunk, World, MeshSections, VoxelDataCopy,
-				ChunkSize, ChunkSize, ChunkHeight,
+				ChunkSize, ChunkSize, ChunkSize,
 				FVector(0, 1, 0),
 				[&](int x, int z, int y) { return GetIndex(x, y, z, ChunkSize); },
 				[&](int x, int z, int y) { return CheckVoxel(Chunk, ChunkCoords, x, y + 1, z); },
@@ -130,7 +128,7 @@ namespace VoxelChunkAsync
 			// -Y (Back)
 			ProcessFace(
 				Chunk, World, MeshSections, VoxelDataCopy,
-				ChunkSize, ChunkSize, ChunkHeight,
+				ChunkSize, ChunkSize, ChunkSize,
 				FVector(0, -1, 0),
 				[&](int x, int z, int y) { return GetIndex(x, y, z, ChunkSize); },
 				[&](int x, int z, int y) { return CheckVoxel(Chunk, ChunkCoords, x, y - 1, z); },
@@ -140,7 +138,7 @@ namespace VoxelChunkAsync
 			// +X (Right)
 			ProcessFace(
 				Chunk, World, MeshSections, VoxelDataCopy,
-				ChunkSize, ChunkSize, ChunkHeight,
+				ChunkSize, ChunkSize, ChunkSize,
 				FVector(1, 0, 0),
 
 				[&](int y, int z, int x) { return GetIndex(x, y, z, ChunkSize); },
@@ -151,7 +149,7 @@ namespace VoxelChunkAsync
 			// -X (Left)
 			ProcessFace(
 				Chunk, World, MeshSections, VoxelDataCopy,
-				ChunkSize, ChunkSize, ChunkHeight,
+				ChunkSize, ChunkSize, ChunkSize,
 				FVector(-1, 0, 0),
 				[&](int y, int z, int x) { return GetIndex(x, y, z, ChunkSize); },
 				[&](int y, int z, int x) { return CheckVoxel(Chunk, ChunkCoords, x - 1, y, z); },
@@ -176,7 +174,7 @@ namespace VoxelChunkAsync
     	return (Z * ChunkSize * ChunkSize) + (Y * ChunkSize) + X;
     }
 
-	bool CheckVoxel(const TWeakObjectPtr<AVoxelChunk>& Chunk, FIntPoint ChunkCoords, int X, int Y, int Z)
+	bool CheckVoxel(const TWeakObjectPtr<AVoxelChunk>& Chunk, FIntVector ChunkCoords, int X, int Y, int Z)
     {
     	return Chunk.IsValid() ? Chunk->CheckVoxel(X, Y, Z, ChunkCoords) : false;
     }

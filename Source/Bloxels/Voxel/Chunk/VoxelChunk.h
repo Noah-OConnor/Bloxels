@@ -23,10 +23,10 @@ public:
 	AVoxelChunk();
 	
 	UPROPERTY(VisibleAnywhere)
-	FIntPoint ChunkCoords = FIntPoint(-MAX_int32, -MAX_int32);
+	FIntVector ChunkCoords = FIntVector(-MAX_int32, -MAX_int32, -MAX_int32);
 
 	
-	void InitializeChunk(AVoxelWorld* InVoxelWorld, int32 ChunkX, int32 ChunkY, bool bShouldGenMesh);
+	void InitializeChunk(AVoxelWorld* InVoxelWorld, int32 ChunkX, int32 ChunkY, int32 ChunkZ, bool bShouldGenMesh);
 
 	void OnChunkDataGenerated(TArray<uint16> InVoxelData);
 
@@ -38,9 +38,9 @@ public:
 
 	bool IsVoxelInChunk(int X, int Y, int Z) const;
 
-	bool CheckVoxel(int X, int Y, int Z, FIntPoint ChunkCoord);
+	bool CheckVoxel(int X, int Y, int Z, FIntVector ChunkCoord);
 
-	void SetChunkCoords(FIntPoint InCoords);
+	void SetChunkCoords(FIntVector InCoords);
 
 
 	// BOOLS

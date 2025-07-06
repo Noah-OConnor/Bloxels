@@ -14,14 +14,14 @@ AVoxelChunk::AVoxelChunk()
 	RootComponent = MeshComponent;
 }
 
-void AVoxelChunk::InitializeChunk(AVoxelWorld* InVoxelWorld, int32 ChunkX, int32 ChunkY, bool bShouldGenMesh)
+void AVoxelChunk::InitializeChunk(AVoxelWorld* InVoxelWorld, int32 ChunkX, int32 ChunkY, int32 ChunkZ, bool bShouldGenMesh)
 {
 	VoxelWorld = InVoxelWorld;
-	ChunkCoords = FIntPoint(ChunkX, ChunkY);
+	ChunkCoords = FIntVector(ChunkX, ChunkY, ChunkZ);
 	bGenerateMesh = bShouldGenMesh;
 
 	// Initialize Voxel Data Size ***THIS SHOULD NOT CHANGE ANYWHERE AFTER ITS SET***
-	VoxelData.SetNum(VoxelWorld->ChunkSize * VoxelWorld->ChunkSize * VoxelWorld->ChunkHeight);
+	VoxelData.SetNum(VoxelWorld->ChunkSize * VoxelWorld->ChunkSize * VoxelWorld->ChunkSize);
 
 	GenerateChunkDataAsync();
 }
@@ -84,14 +84,16 @@ void AVoxelChunk::TryGenerateChunkMesh()
 
     UE_LOG(LogTemp, Log, TEXT("Generating chunk mesh (%d, %d)"), ChunkCoords.X, ChunkCoords.Y);
 
-    static const FIntPoint Offsets[] = {
-        {1, 0}, {-1, 0}, {0, 1}, {0, -1} // Only considering 2D neighbors
+    static const FIntVector Offsets[] = {
+        {1, 0, 0}, {-1, 0, 0},
+        {0, 1, 0}, {0, -1, 0},
+        {0, 0, 1}, {0, 0, -1}
     };
     bool bAllGenerated = true;
 
-    for (const FIntPoint& Offset : Offsets)
+    for (const FIntVector& Offset : Offsets)
     {
-        FIntPoint NeighborCoord(ChunkCoords.X + Offset.X, ChunkCoords.Y + Offset.Y);
+        FIntVector NeighborCoord(ChunkCoords.X + Offset.X, ChunkCoords.Y + Offset.Y, ChunkCoords.Z + Offset.Z);
         AVoxelChunk* NeighborChunk = nullptr;// = *VoxelWorld->Chunks.Find(NeighborCoord);
         if (VoxelWorld->Chunks.Contains(NeighborCoord))
         {
@@ -107,7 +109,7 @@ void AVoxelChunk::TryGenerateChunkMesh()
         {
             bAllGenerated = false;
             // We need to create the chunk & subscribe to on data generated
-            VoxelWorld->TryCreateNewChunk(NeighborCoord.X, NeighborCoord.Y, false);
+            VoxelWorld->TryCreateNewChunk(NeighborCoord.X, NeighborCoord.Y, NeighborCoord.Z, false);
 
             NeighborChunk = *VoxelWorld->Chunks.Find(NeighborCoord);
         }
@@ -147,7 +149,7 @@ void AVoxelChunk::GenerateChunkMeshAsync()
 	TWeakObjectPtr<AVoxelChunk> WeakChunk(this);
 	TWeakObjectPtr<AVoxelWorld> WeakWorld(VoxelWorld);
     TArray<uint16> VoxelDataCopy = VoxelData;
-	const FIntPoint ChunkCoordsCopy = ChunkCoords;
+	const FIntVector ChunkCoordsCopy = ChunkCoords;
 
 	VoxelChunkAsync::GenerateChunkMeshAsync(WeakChunk, WeakWorld, VoxelDataCopy, ChunkCoordsCopy);
 }
@@ -248,11 +250,11 @@ bool AVoxelChunk::IsVoxelInChunk(int X, int Y, int Z) const
 	// returns true if the voxel is within the chunk bounds
     return (X >= 0 && X < VoxelWorld->ChunkSize &&
         Y >= 0 && Y < VoxelWorld->ChunkSize &&
-        Z >= 0 && Z < VoxelWorld->ChunkHeight);
+        Z >= 0 && Z < VoxelWorld->ChunkSize);
 }
 
 /// <returns>Returns true when voxel is transparent or outside the chunk</returns>
-bool AVoxelChunk::CheckVoxel(int X, int Y, int Z, FIntPoint ChunkCoord)
+bool AVoxelChunk::CheckVoxel(int X, int Y, int Z, FIntVector ChunkCoord)
 {
     if (!IsValid(VoxelWorld)) return false;
     if (IsVoxelInChunk(X, Y, Z))
@@ -271,7 +273,7 @@ bool AVoxelChunk::CheckVoxel(int X, int Y, int Z, FIntPoint ChunkCoord)
     }
 }
 
-void AVoxelChunk::SetChunkCoords(FIntPoint InCoords)
+void AVoxelChunk::SetChunkCoords(FIntVector InCoords)
 {
     ChunkCoords = InCoords;
 }
