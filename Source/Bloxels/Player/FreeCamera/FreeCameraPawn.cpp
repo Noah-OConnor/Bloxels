@@ -113,8 +113,8 @@ void AFreeCameraPawn::OnRightClick()
                                            FMath::FloorToInt(PlacePoint.Y / 100.f),
                                            FMath::FloorToInt(PlacePoint.Z / 100.f));
 
-        VoxelWorld->PlaceBlock(BlockCoord.X, BlockCoord.Y, BlockCoord.Z, 1); // Block 0
-        UE_LOG(LogTemp, Log, TEXT("Placed block 1 at %s"), *BlockCoord.ToString());
+        VoxelWorld->PlaceBlock(BlockCoord.X, BlockCoord.Y, BlockCoord.Z, VoxelWorld->GetVoxelRegistry()->GetIDFromName("AirForced")); 
+        UE_LOG(LogTemp, Log, TEXT("Placed stone at %s"), *BlockCoord.ToString());
     }
 }
 

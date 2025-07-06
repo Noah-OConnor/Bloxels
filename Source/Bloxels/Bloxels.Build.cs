@@ -16,7 +16,9 @@ public class Bloxels : ModuleRules
 			"EnhancedInput", 
 			"ProceduralMeshComponent",
 			"FastNoiseGenerator",
-			"FastNoise"
+			"FastNoise",
+			"Json",
+			"JsonUtilities"
 		});
 	}
 }

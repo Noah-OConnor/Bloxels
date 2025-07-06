@@ -32,6 +32,13 @@ public:
 	UFUNCTION(Exec)
 	void ClearAllSelections();
 
+	// Structure I/O
+	UFUNCTION(Exec)
+	void ExportSelection(const FString& FileName);
+
+	UFUNCTION(Exec)
+	void ImportStructure(const FString& FileName);
+
 	// Pathfinding Commands
 	UFUNCTION(Exec)
 	void SetPathStartLookAt(bool bOffset = false);

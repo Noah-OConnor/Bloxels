@@ -242,7 +242,7 @@ int AVoxelWorld::PlaceBlock(const int X, const int Y, const int Z, const int Blo
 			Chunk->VoxelData[(Z * ChunkSize * ChunkSize) + (LocalY * ChunkSize) + LocalX] = BlockToPlace;
 
 			// Optionally trigger mesh regeneration here
-			Chunk->TryGenerateChunkMesh();
+			//Chunk->TryGenerateChunkMesh();
 
             // if block is on a block border, regenerate the adjacent chunk to that block
             if (LocalX == 0) 
@@ -250,7 +250,7 @@ int AVoxelWorld::PlaceBlock(const int X, const int Y, const int Z, const int Blo
                 if (AVoxelChunk* AdjacentChunk = Chunks[FIntPoint(ChunkX - 1, ChunkY)])
                 {
                     // regenerate the chunk to the left
-                    AdjacentChunk->TryGenerateChunkMesh();
+                    //AdjacentChunk->TryGenerateChunkMesh();
                 }
             }
             else if (LocalX == ChunkSize - 1)
@@ -258,7 +258,7 @@ int AVoxelWorld::PlaceBlock(const int X, const int Y, const int Z, const int Blo
                 if (AVoxelChunk* AdjacentChunk = Chunks[FIntPoint(ChunkX + 1, ChunkY)])
                 {
                     // regenerate the chunk to the right
-                    AdjacentChunk->TryGenerateChunkMesh();
+                    //AdjacentChunk->TryGenerateChunkMesh();
                 }
             }
 
@@ -267,7 +267,7 @@ int AVoxelWorld::PlaceBlock(const int X, const int Y, const int Z, const int Blo
                 if (AVoxelChunk* AdjacentChunk = Chunks[FIntPoint(ChunkX, ChunkY - 1)])
                 {
                     // regenerate the chunk to the left
-                    AdjacentChunk->TryGenerateChunkMesh();
+                    //AdjacentChunk->TryGenerateChunkMesh();
                 }
             }
             else if (LocalY == ChunkSize - 1)
@@ -275,7 +275,7 @@ int AVoxelWorld::PlaceBlock(const int X, const int Y, const int Z, const int Blo
                 if (AVoxelChunk* AdjacentChunk = Chunks[FIntPoint(ChunkX, ChunkY + 1)])
                 {
                     // regenerate the chunk to the right
-                    AdjacentChunk->TryGenerateChunkMesh();
+                    //AdjacentChunk->TryGenerateChunkMesh();
                 }
             }
             return OriginalBlock;

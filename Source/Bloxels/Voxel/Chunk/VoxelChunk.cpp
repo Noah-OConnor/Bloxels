@@ -82,6 +82,8 @@ void AVoxelChunk::TryGenerateChunkMesh()
         return;
     }
 
+    UE_LOG(LogTemp, Log, TEXT("Generating chunk mesh (%d, %d)"), ChunkCoords.X, ChunkCoords.Y);
+
     static const FIntPoint Offsets[] = {
         {1, 0}, {-1, 0}, {0, 1}, {0, -1} // Only considering 2D neighbors
     };

@@ -303,7 +303,7 @@ namespace VoxelChunkAsync
     				const int16 VoxelType = VoxelData[Index];
     				const UVoxelData* Voxel = World->GetVoxelRegistry()->GetVoxelByID(VoxelType);
 
-    				if (Voxel && Voxel->bIsSolid && IsNeighborVisible(A, B, P))
+    				if (Voxel && !Voxel->bIsInvisible && IsNeighborVisible(A, B, P))
     				{
     					Mask[A][B] = { VoxelType, true };
     				}
