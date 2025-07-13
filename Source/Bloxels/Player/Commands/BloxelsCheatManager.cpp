@@ -248,6 +248,17 @@ void UBloxelsCheatManager::ClearPathEnd()
     }
 }
 
+void UBloxelsCheatManager::GiveBlock(const FString& BlockName) const
+{
+    if (const APlayerController* PC = GetOuterAPlayerController())
+    {
+        if (AFreeCameraPawn* CameraPawn = Cast<AFreeCameraPawn>(PC->GetPawn()))
+        {
+            CameraPawn->SetCurrentBlock(FName(BlockName));
+        }
+    }
+}
+
 
 void UBloxelsCheatManager::SetPosition(int32 Index, const FVector& Pos)
 {

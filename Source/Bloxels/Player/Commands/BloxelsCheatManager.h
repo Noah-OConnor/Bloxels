@@ -52,6 +52,10 @@ public:
 	UFUNCTION(Exec)
 	void ClearPathEnd();
 
+	// Give Block!
+	UFUNCTION(Exec)
+	void GiveBlock(const FString& BlockName) const;
+
 private:
 	// Block Selection Helpers
 	void SetPosition(int32 Index, const FVector& Pos);

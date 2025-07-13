@@ -18,6 +18,8 @@ public:
 
 	UCameraComponent* GetCamera() const;
 
+	void SetCurrentBlock(const FName BlockName);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
@@ -32,6 +34,9 @@ private:
 
 	UPROPERTY()
 	AVoxelWorld* VoxelWorld;
+
+	UPROPERTY()
+	FName CurrentBlock = FName("Stone");
 
 	UFUNCTION()
 	void OnLeftClick();

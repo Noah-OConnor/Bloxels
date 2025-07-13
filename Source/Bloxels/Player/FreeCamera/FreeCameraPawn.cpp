@@ -25,6 +25,11 @@ UCameraComponent* AFreeCameraPawn::GetCamera() const
     return Camera;
 }
 
+void AFreeCameraPawn::SetCurrentBlock(const FName BlockName)
+{
+    CurrentBlock = BlockName;
+}
+
 void AFreeCameraPawn::BeginPlay()
 {
     Super::BeginPlay();
@@ -87,7 +92,7 @@ void AFreeCameraPawn::OnLeftClick()
                                            FMath::FloorToInt(HitPoint.Y / 100.f),
                                            FMath::FloorToInt(HitPoint.Z / 100.f));
 
-        VoxelWorld->PlaceBlock(BlockCoord.X, BlockCoord.Y, BlockCoord.Z, VoxelWorld->GetVoxelRegistry()->GetIDFromName(FName("Air"))); // Air
+        VoxelWorld->PlaceBlock(BlockCoord.X, BlockCoord.Y, BlockCoord.Z, VoxelWorld->GetVoxelRegistry()->GetIDFromName("Air")); // Air
         UE_LOG(LogTemp, Log, TEXT("Placed air at %s"), *BlockCoord.ToString());
     }
 }
@@ -113,8 +118,8 @@ void AFreeCameraPawn::OnRightClick()
                                            FMath::FloorToInt(PlacePoint.Y / 100.f),
                                            FMath::FloorToInt(PlacePoint.Z / 100.f));
 
-        VoxelWorld->PlaceBlock(BlockCoord.X, BlockCoord.Y, BlockCoord.Z, VoxelWorld->GetVoxelRegistry()->GetIDFromName("AirForced")); 
-        UE_LOG(LogTemp, Log, TEXT("Placed stone at %s"), *BlockCoord.ToString());
+        VoxelWorld->PlaceBlock(BlockCoord.X, BlockCoord.Y, BlockCoord.Z, VoxelWorld->GetVoxelRegistry()->GetIDFromName(CurrentBlock)); 
+        UE_LOG(LogTemp, Log, TEXT("Placed %s at %s"), *CurrentBlock.ToString(), *BlockCoord.ToString());
     }
 }
 
