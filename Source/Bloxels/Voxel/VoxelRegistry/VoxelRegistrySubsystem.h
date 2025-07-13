@@ -5,10 +5,10 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Bloxels/Voxel/Core/VoxelData.h"
-#include "VoxelRegistry.generated.h"
+#include "VoxelRegistrySubsystem.generated.h"
 
 UCLASS()
-class BLOXELS_API UVoxelRegistry : public UGameInstanceSubsystem
+class BLOXELS_API UVoxelRegistrySubsystem : public UGameInstanceSubsystem
 {
     GENERATED_BODY()
 

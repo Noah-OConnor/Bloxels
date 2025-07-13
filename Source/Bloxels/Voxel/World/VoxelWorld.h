@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "FastNoiseWrapper.h"
 #include "WorldGenerationSubsystem.h"
-#include "Bloxels/Voxel/VoxelRegistry/VoxelRegistry.h"
+#include "Bloxels/Voxel/VoxelRegistry/VoxelRegistrySubsystem.h"
 #include "Engine/TriggerVolume.h"
 #include "GameFramework/Actor.h"
 #include "VoxelWorld.generated.h"
@@ -48,7 +48,7 @@ public:
     mutable FRWLock ActiveChunksLock;
     
     int16 GetVoxelAtWorldCoordinates(int X, int Y, int Z);
-    UVoxelRegistry* GetVoxelRegistry() const;
+    UVoxelRegistrySubsystem* GetVoxelRegistry() const;
     UWorldGenerationSubsystem* GetWorldGenerationSubsystem() const;
     UWorldGenerationConfig* GetWorldGenerationConfig() const;
     void TryCreateNewChunk(int32 ChunkX, int32 ChunkY, int32 ChunkZ, bool bShouldGenMesh);

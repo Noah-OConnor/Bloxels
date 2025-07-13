@@ -5,7 +5,7 @@
 #include "WorldGenerationConfig.h"
 #include "WorldGenerationSubsystem.h"
 #include "Bloxels/Voxel/Chunk/VoxelChunk.h"
-#include "Bloxels/Voxel/VoxelRegistry/VoxelRegistry.h"
+#include "Bloxels/Voxel/VoxelRegistry/VoxelRegistrySubsystem.h"
 #include "Components/BrushComponent.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -43,7 +43,7 @@ void AVoxelWorld::BeginPlay()
 void AVoxelWorld::DelayedGenerateWorld()
 {
     // Ensure voxel registry is ready
-    UVoxelRegistry* Registry = GetVoxelRegistry();
+    UVoxelRegistrySubsystem* Registry = GetVoxelRegistry();
     if (!Registry || Registry->VoxelAssets.Num() == 0)
     {
         UE_LOG(LogTemp, Warning, TEXT("VoxelRegistry not ready, delaying again..."));
@@ -363,9 +363,9 @@ int16 AVoxelWorld::GetVoxelAtWorldCoordinates(int X, int Y, int Z)
     return GetVoxelRegistry()->GetIDFromName(FName("Air")); // Air
 }
 
-UVoxelRegistry* AVoxelWorld::GetVoxelRegistry() const
+UVoxelRegistrySubsystem* AVoxelWorld::GetVoxelRegistry() const
 {
-    return GetGameInstance()->GetSubsystem<UVoxelRegistry>();
+    return GetGameInstance()->GetSubsystem<UVoxelRegistrySubsystem>();
 }
 
 UWorldGenerationSubsystem* AVoxelWorld::GetWorldGenerationSubsystem() const

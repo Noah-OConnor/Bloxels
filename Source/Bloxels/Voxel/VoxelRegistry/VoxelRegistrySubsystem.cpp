@@ -1,10 +1,10 @@
 // Copyright 2025 Bloxels. All rights reserved.
 
-#include "VoxelRegistry.h"
+#include "VoxelRegistrySubsystem.h"
 #include "Engine/StreamableManager.h"
 #include "Engine/AssetManager.h"
 
-void UVoxelRegistry::Initialize(FSubsystemCollectionBase& Collection)
+void UVoxelRegistrySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
 
@@ -51,7 +51,7 @@ void UVoxelRegistry::Initialize(FSubsystemCollectionBase& Collection)
 }
 
 
-void UVoxelRegistry::RegisterVoxel(UVoxelData* Voxel)
+void UVoxelRegistrySubsystem::RegisterVoxel(UVoxelData* Voxel)
 {
     if (!Voxel || !Voxel->VoxelID.IsValid()) return;
 
@@ -67,21 +67,21 @@ void UVoxelRegistry::RegisterVoxel(UVoxelData* Voxel)
 }
 
 
-uint16 UVoxelRegistry::GetIDFromName(FName Name) const
+uint16 UVoxelRegistrySubsystem::GetIDFromName(FName Name) const
 {
     if (const uint16* ID = NameToID.Find(Name))
         return *ID;
     return 0; // Default/fallback
 }
 
-FName UVoxelRegistry::GetNameFromID(uint16 ID) const
+FName UVoxelRegistrySubsystem::GetNameFromID(uint16 ID) const
 {
     if (const FName* Name = IDToName.Find(ID))
         return *Name;
     return NAME_None;
 }
 
-UVoxelData* UVoxelRegistry::GetVoxelByID(uint16 ID) const
+UVoxelData* UVoxelRegistrySubsystem::GetVoxelByID(uint16 ID) const
 {
     if (UVoxelData* const* Voxel = IDToVoxel.Find(ID))
         return *Voxel;
