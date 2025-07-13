@@ -2,4 +2,8 @@
 	
 	<s:String x:Key="/Default/CodeStyle/CodeFormatting/CppFormatting/INDENT_STYLE/@EntryValue">Space</s:String>
 	<s:Boolean x:Key="/Default/Environment/SettingsMigration/IsMigratorApplied/=JetBrains_002EReSharper_002EFeature_002EServices_002ECpp_002ECodeStyle_002ESettingsUpgrade_002EFunctionReturnStyleSettingsUpgrader/@EntryIndexedValue">True</s:Boolean>
+	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=C3F5286BA514457D555D05D714C839BD/Field/=COPYRIGHT_005FLINE/InitialRange/@EntryValue">0</s:Int64>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=C3F5286BA514457D555D05D714C839BD/Field/=MY_005FHEADER_005FINCLUDE_005FDIRECTIVEAABB/@KeyIndexDefined">False</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=CD6CC7596E3E79334480EE35B1467D2C/Field/=COPYRIGHT_005FLINE/Expression/@EntryValue">getProjectName()</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=CD6CC7596E3E79334480EE35B1467D2C/Field/=MY_005FHEADER_005FINCLUDE_005FDIRECTIVEAABB/@KeyIndexDefined">False</s:Boolean>
 	</wpf:ResourceDictionary>

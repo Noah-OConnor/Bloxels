@@ -1,15 +1,19 @@
-// Copyright 2025 Noah O'Connor. All rights reserved.
+// Copyright 2025 Bloxels. All rights reserved.
 
 #include "VoxelWorld.h"
 #include "DrawDebugHelpers.h"
 #include "WorldGenerationConfig.h"
-#include "Biome/BiomeProperties.h"
+#include "WorldGenerationSubsystem.h"
 #include "Bloxels/Voxel/Chunk/VoxelChunk.h"
 #include "Bloxels/Voxel/VoxelRegistry/VoxelRegistry.h"
 #include "Components/BrushComponent.h"
 #include "Kismet/GameplayStatics.h"
 
-AVoxelWorld::AVoxelWorld()
+AVoxelWorld::AVoxelWorld(): VoxelWorldConfig(nullptr),
+                            TemperatureNoise(nullptr),
+                            HabitabilityNoise(nullptr),
+                            ElevationNoise(nullptr),
+                            PlayerPawn(nullptr)
 {
     PrimaryActorTick.bCanEverTick = true;
 }
@@ -24,40 +28,16 @@ void AVoxelWorld::BeginPlay()
         return;
     }
 
-    InitializeNoiseLayers();
+    if (UWorldGenerationSubsystem* WorldGenSubsystem = GetGameInstance()->GetSubsystem<UWorldGenerationSubsystem>())
+    {
+        WorldGenSubsystem->InitializeConfig(VoxelWorldConfig);
+    }
 
     FTimerHandle DelayWorldGenTimer;
     GetWorldTimerManager().SetTimer(DelayWorldGenTimer, this, &AVoxelWorld::DelayedGenerateWorld, 0.1f, false);
 
     InitializePlayer();
     InitializeTriggerVolume();
-}
-
-void AVoxelWorld::InitializeNoiseLayers()
-{
-    // Setup Temperature Noise
-    TemperatureNoise = NewObject<UFastNoiseWrapper>();
-    TemperatureNoise->SetupFastNoise(VoxelWorldConfig->Temperature.NoiseType); // Set noise type
-    TemperatureNoise->SetFrequency(VoxelWorldConfig->Temperature.NoiseFrequency);
-    TemperatureNoise->SetFractalType(VoxelWorldConfig->Temperature.NoiseFractalType);
-    TemperatureNoise->SetOctaves(VoxelWorldConfig->Temperature.NoiseOctaves);
-    TemperatureNoise->SetSeed(VoxelWorldConfig->Temperature.NoiseSeed);
-
-    // Setup Habitability Noise
-    HabitabilityNoise = NewObject<UFastNoiseWrapper>();
-    HabitabilityNoise->SetupFastNoise(VoxelWorldConfig->Habitability.NoiseType); // Set noise type
-    HabitabilityNoise->SetFrequency(VoxelWorldConfig->Habitability.NoiseFrequency);
-    HabitabilityNoise->SetFractalType(VoxelWorldConfig->Habitability.NoiseFractalType);
-    HabitabilityNoise->SetOctaves(VoxelWorldConfig->Habitability.NoiseOctaves);
-    HabitabilityNoise->SetSeed(VoxelWorldConfig->Habitability.NoiseSeed);
-
-    // Setup Elevation Noise
-    ElevationNoise = NewObject<UFastNoiseWrapper>();
-    ElevationNoise->SetupFastNoise(VoxelWorldConfig->Elevation.NoiseType); // Set noise type
-    ElevationNoise->SetFrequency(VoxelWorldConfig->Elevation.NoiseFrequency);
-    ElevationNoise->SetFractalType(VoxelWorldConfig->Elevation.NoiseFractalType);
-    ElevationNoise->SetOctaves(VoxelWorldConfig->Elevation.NoiseOctaves);
-    ElevationNoise->SetSeed(VoxelWorldConfig->Elevation.NoiseSeed);
 }
 
 void AVoxelWorld::DelayedGenerateWorld()
@@ -355,83 +335,6 @@ void AVoxelWorld::UpdateTriggerVolume(FVector PlayerPosition) const
     }
 }
 
-EBiome AVoxelWorld::GetBiome(int X, int Y) const
-{
-    float temperature = 0;
-    float habitability = 0;
-    float elevation = 0;
-    if (VoxelWorldConfig->Temperature.UseThisNoise)
-    {
-        temperature = (TemperatureNoise->GetNoise2D(X, Y) + 1) / 2;
-    }
-    if (VoxelWorldConfig->Habitability.UseThisNoise)
-    {
-        habitability = (HabitabilityNoise->GetNoise2D(X, Y) + 1) / 2;
-    }
-    if (VoxelWorldConfig->Elevation.UseThisNoise)
-    {
-        elevation = (ElevationNoise->GetNoise2D(X, Y) + 1) / 2;
-    }
-
-    static const FString ContextString(TEXT("Biome Properties Context"));
-    TArray<FBiomeProperties*> AllRows;
-    VoxelWorldConfig->BiomeDataTable->GetAllRows(ContextString, AllRows);
-
-    for (const FBiomeProperties* Row : AllRows)
-    {
-        if (!Row) continue;
-
-        for (const FBiomeNoiseRanges& row : Row->BiomeNoiseRanges)
-        {
-            if (temperature >= row.MinTemperature && temperature <= row.MaxTemperature &&
-                habitability >= row.MinHabitability && habitability <= row.MaxHabitability &&
-                elevation >= row.MinElevation && elevation <= row.MaxElevation)
-            {
-                return Row->BiomeType;
-            }
-        }
-    }
-    return EBiome::None; // Default biome if no match is found
-}
-
-int AVoxelWorld::GetTerrainHeight(int X, int Y, EBiome Biome) const
-{
-    // default baseheight in case we're not using any noise layers
-    float BaseHeight = VoxelWorldConfig->ChunkSize / 2;
-    
-    // STEP 1: set up base noise
-    if (VoxelWorldConfig->Elevation.UseThisNoise)
-    {
-        float elevation = (ElevationNoise->GetNoise2D(X, Y) + 1) / 2;
-        BaseHeight = VoxelWorldConfig->Elevation.NoiseCurve->GetFloatValue(elevation) / 2;
-    }
-
-    // STEP 2: Add biome specific noise
-
-
-
-    return BaseHeight * VoxelWorldConfig->ChunkSize;
-}
-
-const FBiomeProperties* AVoxelWorld::GetBiomeData(EBiome Biome) const
-{
-    if (VoxelWorldConfig->BiomeDataTable)
-    {
-        FString ContextString;
-        TArray<FBiomeProperties*> AllRows;
-        VoxelWorldConfig->BiomeDataTable->GetAllRows(ContextString, AllRows);
-
-        for (const FBiomeProperties* Row : AllRows)
-        {
-            if (Row && Row->BiomeType == Biome)
-            {
-                return Row;
-            }
-        }
-    }
-    return nullptr;
-}
-
 int16 AVoxelWorld::GetVoxelAtWorldCoordinates(int X, int Y, int Z)
 {
     const int ChunkSize = VoxelWorldConfig->ChunkSize;
@@ -463,6 +366,11 @@ int16 AVoxelWorld::GetVoxelAtWorldCoordinates(int X, int Y, int Z)
 UVoxelRegistry* AVoxelWorld::GetVoxelRegistry() const
 {
     return GetGameInstance()->GetSubsystem<UVoxelRegistry>();
+}
+
+UWorldGenerationSubsystem* AVoxelWorld::GetWorldGenerationSubsystem() const
+{
+    return GetGameInstance()->GetSubsystem<UWorldGenerationSubsystem>();
 }
 
 UWorldGenerationConfig* AVoxelWorld::GetWorldGenerationConfig() const

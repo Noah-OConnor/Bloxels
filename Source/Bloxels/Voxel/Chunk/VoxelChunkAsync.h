@@ -1,3 +1,5 @@
+// Copyright 2025 Bloxels. All rights reserved.
+
 #pragma once
 
 #include <functional>
@@ -13,8 +15,6 @@ namespace VoxelChunkAsync
 {
     // Chunk Data Generation
     void GenerateChunkDataAsync(TWeakObjectPtr<AVoxelChunk> Chunk, TWeakObjectPtr<AVoxelWorld> World, FIntVector ChunkCoords);
-    
-    FName GetVoxelTypeForPosition(const int Z, const int TerrainHeight, const FBiomeProperties* BiomeData);
 
     // Chunk Mesh Generation
     void GenerateChunkMeshAsync(

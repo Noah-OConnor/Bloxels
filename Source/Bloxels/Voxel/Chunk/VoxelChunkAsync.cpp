@@ -1,3 +1,5 @@
+// Copyright 2025 Bloxels. All rights reserved.
+
 #include "VoxelChunkAsync.h"
 
 #include <functional>
@@ -34,14 +36,17 @@ namespace VoxelChunkAsync
                     int WorldX = ChunkX * ChunkSize + x;
                     int WorldY = ChunkY * ChunkSize + y;
 
-                    EBiome Biome = World->GetBiome(WorldX, WorldY);
-                    const FBiomeProperties* BiomeData = World->GetBiomeData(Biome);
-                    int TerrainHeight = World->GetTerrainHeight(WorldX, WorldY, Biome);
+					const UWorldGenerationSubsystem* WorldGenerationSubsystem = World->GetWorldGenerationSubsystem();
+                	
+                    EBiome Biome = WorldGenerationSubsystem->GetBiome(WorldX, WorldY);
+                    const FBiomeProperties* BiomeData = WorldGenerationSubsystem->GetBiomeData(Biome);
+                    int TerrainHeight = WorldGenerationSubsystem->GetTerrainHeight(WorldX, WorldY, Biome);
 
                     for (int z = 0; z < TerrainHeight; ++z)
                     {
                         int Index = (z * ChunkSize * ChunkSize) + (y * ChunkSize) + x;
-                        VoxelData[Index] = World->GetVoxelRegistry()->GetIDFromName(GetVoxelTypeForPosition(z, TerrainHeight, BiomeData));
+                    	FName VoxelType = WorldGenerationSubsystem->GetVoxelTypeForPosition(z, TerrainHeight, BiomeData);
+                        VoxelData[Index] = World->GetVoxelRegistry()->GetIDFromName(VoxelType);
                     }
                 }
             }
@@ -54,31 +59,6 @@ namespace VoxelChunkAsync
                 }
             });
         });
-    }
-    
-    FName GetVoxelTypeForPosition(const int Z, const int TerrainHeight, const FBiomeProperties* BiomeData)
-    {
-        const FName Stone = FName("Stone");
-        const FName Obsidian = FName("Obsidian");
-    	
-        if (Z < 2)
-        {
-            return Obsidian;
-        }
-
-        if (BiomeData && BiomeData->SurfaceBlocks.Num() > 0)
-        {
-            for (const auto& [VoxelType, BlocksFromSurface, NumBlocks] : BiomeData->SurfaceBlocks)
-            {
-                const int Bottom = TerrainHeight - BlocksFromSurface - NumBlocks;
-                if (const int Top = TerrainHeight - BlocksFromSurface; Z >= Bottom && Z <= Top)
-                {
-                    return VoxelType;
-                }
-            }
-        }
-
-        return Stone;
     }
 
 	void GenerateChunkMeshAsync(
