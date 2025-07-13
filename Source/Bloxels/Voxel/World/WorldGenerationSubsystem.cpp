@@ -1,5 +1,6 @@
 // Copyright 2025 Bloxels. All rights reserved.
 
+
 #include "WorldGenerationSubsystem.h"
 
 void UWorldGenerationSubsystem::InitializeConfig(UWorldGenerationConfig* InConfig)
@@ -47,17 +48,18 @@ int UWorldGenerationSubsystem::GetTerrainHeight(const int X, const int Y, EBiome
 {
     if (!Config) return 32;
 
+    float BaseHeight = Config->ChunkSize / 2.f; // default base height if there are no noise layers
+    
     // STEP 1: Set up base noise from elevation
-    float BaseHeight = Config->ChunkSize / 2.f;
     if (Config->Elevation.UseThisNoise && Config->Elevation.NoiseCurve)
     {
         const float Elevation = (ElevationNoise->GetNoise2D(X, Y) + 1) / 2;
-        BaseHeight = Config->Elevation.NoiseCurve->GetFloatValue(Elevation) / 2.f;
+        BaseHeight = Config->Elevation.NoiseCurve->GetFloatValue(Elevation);
     }
 
     // STEP 2: Add Biome Specific noise
 
-    return FMath::FloorToInt(BaseHeight * Config->ChunkSize);
+    return FMath::FloorToInt(Config->SurfaceMinHeight + (BaseHeight * (Config->SurfaceMaxHeight - Config->SurfaceMinHeight)));
 }
 
 FName UWorldGenerationSubsystem::GetVoxelTypeForPosition(const int Z, const int TerrainHeight,
@@ -66,7 +68,7 @@ FName UWorldGenerationSubsystem::GetVoxelTypeForPosition(const int Z, const int 
     const FName Stone = TEXT("Stone");
     const FName Obsidian = TEXT("Obsidian");
 
-    if (Z < 2) return Obsidian;
+    //if (Z < 2) return Obsidian;
 
     if (BiomeData)
     {
@@ -81,6 +83,53 @@ FName UWorldGenerationSubsystem::GetVoxelTypeForPosition(const int Z, const int 
 
     return Stone;
 }
+
+FName UWorldGenerationSubsystem::GetVoxelAtPosition(int X, int Y, int Z) const
+{
+    if (!Config) return TEXT("Air");
+
+    // Always return air for anything above generation height
+    if (Z > Config->ChunkSize * 20) return TEXT("Air");
+    if (Z < 0) return TEXT("Stone");
+
+    const EBiome Biome = GetBiome(X, Y);
+    const int TerrainHeight = GetTerrainHeight(X, Y, Biome);
+    const FBiomeProperties* BiomeData = GetBiomeData(Biome);
+
+    if (Z > TerrainHeight)
+    {
+        return TEXT("Air");
+    }
+    else
+    {
+        if (UndergroundNoise && UndergroundNoise2)
+        {
+            float WarpStrength = 5;
+            
+            float WarpValX = WarpNoise->GetNoise3D(X, Y, Z) * WarpStrength;
+            float WarpValY = WarpNoise->GetNoise3D(X + 1337, Y + 1337, Z + 1337) * WarpStrength;
+            float WarpValZ = WarpNoise->GetNoise3D(X + 9999, Y + 9999, Z + 9999) * WarpStrength;
+            
+            float NoiseVal = UndergroundNoise->GetNoise3D(X + WarpValX, Y + WarpValY, Z + WarpValZ); // Expected range: [-1, 1]
+
+            float NoiseVal2 = UndergroundNoise2->GetNoise3D(X + WarpValX, Y + WarpValY, Z + WarpValZ);
+
+            NoiseVal = (NoiseVal + NoiseVal2) / 2;
+            if (NoiseVal > 0.95f) return TEXT("Air"); // threshold tunable
+        }
+        
+        if (Z >= TerrainHeight - 10)
+        {
+            return GetVoxelTypeForPosition(Z, TerrainHeight, BiomeData);
+        }
+        
+        return TEXT("Stone");
+    }
+
+    
+    
+}
+
 
 const FBiomeProperties* UWorldGenerationSubsystem::GetBiomeData(const EBiome Biome) const
 {
@@ -136,4 +185,32 @@ void UWorldGenerationSubsystem::InitNoiseGenerators()
         ElevationNoise->SetOctaves(Config->Elevation.NoiseOctaves);
         ElevationNoise->SetSeed(Config->Elevation.NoiseSeed);
     }
+
+    // Underground Noise
+    if (Config->Underground.UseThisNoise)
+    {
+        UndergroundNoise = NewObject<UFastNoiseWrapper>(this);
+        UndergroundNoise->SetupFastNoise(Config->Underground.NoiseType);
+        UndergroundNoise->SetFrequency(Config->Underground.NoiseFrequency);
+        UndergroundNoise->SetFractalType(Config->Underground.NoiseFractalType);
+        UndergroundNoise->SetOctaves(Config->Underground.NoiseOctaves);
+        UndergroundNoise->SetSeed(Config->Underground.NoiseSeed);
+    }
+
+    // Underground Noise
+    if (Config->Underground.UseThisNoise)
+    {
+        UndergroundNoise2 = NewObject<UFastNoiseWrapper>(this);
+        UndergroundNoise2->SetupFastNoise(Config->Underground.NoiseType);
+        UndergroundNoise2->SetFrequency(Config->Underground.NoiseFrequency);
+        UndergroundNoise2->SetFractalType(Config->Underground.NoiseFractalType);
+        UndergroundNoise2->SetOctaves(Config->Underground.NoiseOctaves);
+        UndergroundNoise2->SetSeed(Config->Underground.NoiseSeed + 9999);
+    }
+
+    WarpNoise = NewObject<UFastNoiseWrapper>(this);
+    WarpNoise->SetupFastNoise(EFastNoise_NoiseType::Simplex);
+    WarpNoise->SetFrequency(0.05f);
+    WarpNoise->SetFractalType(EFastNoise_FractalType::FBM);
+    WarpNoise->SetOctaves(2);
 }

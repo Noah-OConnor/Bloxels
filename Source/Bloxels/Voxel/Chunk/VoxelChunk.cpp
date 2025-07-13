@@ -84,7 +84,7 @@ void AVoxelChunk::TryGenerateChunkMesh()
         return;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("Generating chunk mesh (%d, %d)"), ChunkCoords.X, ChunkCoords.Y);
+    //UE_LOG(LogTemp, Log, TEXT("Generating chunk mesh (%d, %d)"), ChunkCoords.X, ChunkCoords.Y);
 
     static const FIntVector Offsets[] = {
         {1, 0, 0}, {-1, 0, 0},
@@ -265,16 +265,15 @@ bool AVoxelChunk::CheckVoxel(int X, int Y, int Z, FIntVector ChunkCoord)
     if (!IsValid(VoxelWorld)) return false;
     if (IsVoxelInChunk(X, Y, Z))
     {
-        if (!IsValid(VoxelWorld)) return false;
         int16 NeighborType = VoxelData[(Z * ChunkSize * ChunkSize) + (Y * ChunkSize) + X];
         return VoxelWorld->GetVoxelRegistry()->GetVoxelByID(NeighborType)->bIsTransparent;
     }
     else
     {
-        if (!IsValid(VoxelWorld)) return false;
         int WorldX = ChunkCoord.X * ChunkSize + X;
         int WorldY = ChunkCoord.Y * ChunkSize + Y;
-        int16 NeighborType = VoxelWorld->GetVoxelAtWorldCoordinates(WorldX, WorldY, Z);
+        int WorldZ = ChunkCoord.Z * ChunkSize + Z;
+        int16 NeighborType = VoxelWorld->GetVoxelAtWorldCoordinates(WorldX, WorldY, WorldZ);
         return VoxelWorld->GetVoxelRegistry()->GetVoxelByID(NeighborType)->bIsTransparent;
     }
 }

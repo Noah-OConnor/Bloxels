@@ -21,6 +21,7 @@ namespace VoxelChunkAsync
             const int32 ChunkSize = World->GetWorldGenerationConfig()->ChunkSize;
             const int32 ChunkX = ChunkCoords.X;
             const int32 ChunkY = ChunkCoords.Y;
+            const int32 ChunkZ = ChunkCoords.Z;
 
             TArray<uint16> VoxelData;
             VoxelData.SetNum(ChunkSize * ChunkSize * ChunkSize);
@@ -33,19 +34,14 @@ namespace VoxelChunkAsync
             {
                 for (int y = 0; y < ChunkSize; ++y)
                 {
-                    int WorldX = ChunkX * ChunkSize + x;
-                    int WorldY = ChunkY * ChunkSize + y;
-
-					const UWorldGenerationSubsystem* WorldGenerationSubsystem = World->GetWorldGenerationSubsystem();
-                	
-                    EBiome Biome = WorldGenerationSubsystem->GetBiome(WorldX, WorldY);
-                    const FBiomeProperties* BiomeData = WorldGenerationSubsystem->GetBiomeData(Biome);
-                    int TerrainHeight = WorldGenerationSubsystem->GetTerrainHeight(WorldX, WorldY, Biome);
-
-                    for (int z = 0; z < TerrainHeight; ++z)
+                    for (int z = 0; z < ChunkSize; ++z)
                     {
-                        int Index = (z * ChunkSize * ChunkSize) + (y * ChunkSize) + x;
-                    	FName VoxelType = WorldGenerationSubsystem->GetVoxelTypeForPosition(z, TerrainHeight, BiomeData);
+						const UWorldGenerationSubsystem* WorldGenerationSubsystem = World->GetWorldGenerationSubsystem();
+	                    const int WorldX = ChunkX * ChunkSize + x;
+	                    const int WorldY = ChunkY * ChunkSize + y;
+						const int WorldZ = ChunkZ * ChunkSize + z;
+                        const int Index = (z * ChunkSize * ChunkSize) + (y * ChunkSize) + x;
+                    	const FName VoxelType = WorldGenerationSubsystem->GetVoxelAtPosition(WorldX, WorldY, WorldZ);
                         VoxelData[Index] = World->GetVoxelRegistry()->GetIDFromName(VoxelType);
                     }
                 }

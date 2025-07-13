@@ -59,13 +59,15 @@ void AVoxelWorld::DelayedGenerateWorld()
 void AVoxelWorld::GenerateInitialWorld()
 {
     //UE_LOG(LogTemp, Error, TEXT("GENERATE INITIAL WORLD"));
+    CurrentChunk = FIntVector(0, 0, 10);
+    UE_LOG(LogTemp, Error, TEXT("CURRENT CHUNK: %d, %d, %d"), CurrentChunk.X, CurrentChunk.Y, CurrentChunk.Z);
     for (int X = CurrentChunk.X - WorldSize; X <= CurrentChunk.X + WorldSize; X++)
     {
         for (int Y = CurrentChunk.Y - WorldSize; Y <= CurrentChunk.Y + WorldSize; Y++)
         {
             for (int Z = CurrentChunk.Z - WorldSize; Z <= CurrentChunk.Z + WorldSize; Z++)
             {
-                UE_LOG(LogTemp, Warning, TEXT("Creating chunk at: %d %d %d"), X, Y, Z);
+                //UE_LOG(LogTemp, Warning, TEXT("Creating chunk at: %d %d %d"), X, Y, Z);
                 TryCreateNewChunk(X, Y, Z, true);
             }
         }

@@ -18,6 +18,7 @@ public:
     EBiome GetBiome(int X, int Y) const;
     int GetTerrainHeight(int X, int Y, EBiome Biome) const;
     FName GetVoxelTypeForPosition(int Z, int TerrainHeight, const FBiomeProperties* BiomeData) const;
+    FName GetVoxelAtPosition(int X, int Y, int Z) const;
     const FBiomeProperties* GetBiomeData(EBiome Biome) const;
 
 private:
@@ -32,6 +33,15 @@ private:
 
     UPROPERTY()
     UFastNoiseWrapper* ElevationNoise;
+
+    UPROPERTY()
+    UFastNoiseWrapper* UndergroundNoise;
+
+    UPROPERTY()
+    UFastNoiseWrapper* UndergroundNoise2;
+
+    UPROPERTY()
+    UFastNoiseWrapper* WarpNoise;
 
     void InitNoiseGenerators();
 };

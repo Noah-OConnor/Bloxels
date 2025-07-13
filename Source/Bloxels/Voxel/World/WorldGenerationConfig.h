@@ -18,6 +18,14 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Voxel|World")
     int32 ChunkSize = 16;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Voxel|World",
+        meta = (ToolTip = "The minimum Z coordinate for surface generation in blocks"))
+    int32 SurfaceMinHeight = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Voxel|World",
+        meta = (ToolTip = "The maximum Z coordinate for surface generation in blocks"))
+    int32 SurfaceMaxHeight = 320;
+
     // Biomes
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Biome|Data")
     UDataTable* BiomeDataTable;
@@ -31,4 +39,7 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Biome|Noise Settings")
     FNoiseInfo Elevation;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Biome|Noise Settings")
+    FNoiseInfo Underground;
 };
