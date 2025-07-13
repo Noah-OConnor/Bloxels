@@ -7,6 +7,7 @@
 #include "Bloxels/Player/FreeCamera/FreeCameraPawn.h"
 #include "Bloxels/Voxel/PathFinding/PathfindingSubsystem.h"
 #include "Bloxels/Voxel/Chunk/VoxelChunk.h"
+#include "Bloxels/Voxel/World/WorldGenerationConfig.h"
 #include "Kismet/GameplayStatics.h"
 
 void UBloxelsCheatManager::SelectPositionCoordinates(int32 Index, float X, float Y, float Z)
@@ -185,11 +186,13 @@ void UBloxelsCheatManager::ImportStructure(const FString& FileName)
         
         World->PlaceBlock(WorldVoxelPos.X - 1, WorldVoxelPos.Y - 1, WorldVoxelPos.Z - 1, BlockID);
 
+        const int ChunkSize = World->GetWorldGenerationConfig()->ChunkSize;
+        
         // Track affected chunk
         FIntVector ChunkCoord(
-            FMath::FloorToInt((float)WorldVoxelPos.X / World->ChunkSize),
-            FMath::FloorToInt((float)WorldVoxelPos.Y / World->ChunkSize),
-            FMath::FloorToInt((float)WorldVoxelPos.Z / World->ChunkSize)
+            FMath::FloorToInt(static_cast<float>(WorldVoxelPos.X) / ChunkSize),
+            FMath::FloorToInt(static_cast<float>(WorldVoxelPos.Y) / ChunkSize),
+            FMath::FloorToInt(static_cast<float>(WorldVoxelPos.Z) / ChunkSize)
         );
         AffectedChunks.Add(ChunkCoord);
         ImportedCount++;

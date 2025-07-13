@@ -6,6 +6,7 @@
 #include "Bloxels/Voxel/World/Biome/BiomeProperties.h"
 #include "Tasks/Task.h"
 #include "Async/Async.h"
+#include "Bloxels/Voxel/World/WorldGenerationConfig.h"
 
 namespace VoxelChunkAsync
 {
@@ -15,7 +16,7 @@ namespace VoxelChunkAsync
         {
             if (!Chunk.IsValid() || !World.IsValid()) return;
 
-            const int32 ChunkSize = World->ChunkSize;
+            const int32 ChunkSize = World->GetWorldGenerationConfig()->ChunkSize;
             const int32 ChunkX = ChunkCoords.X;
             const int32 ChunkY = ChunkCoords.Y;
 
@@ -91,7 +92,7 @@ namespace VoxelChunkAsync
 			if (!Chunk.IsValid() || !World.IsValid())
 				return;
 			
-			const int ChunkSize = World->ChunkSize;
+			const int ChunkSize = World->GetWorldGenerationConfig()->ChunkSize;
 
 			TMap<FMeshSectionKey, FMeshData> MeshSections;
 
@@ -188,7 +189,7 @@ namespace VoxelChunkAsync
     {
     	if (!Chunk.IsValid() || !World.IsValid()) return;
 
-    	const int VoxelSize = World->VoxelSize;
+    	const int VoxelSize = World->GetWorldGenerationConfig()->VoxelSize;
     	int32 VertexIndex = Vertices.Num();
     	FVector Right, Up;
 

@@ -5,15 +5,14 @@
 #include "CoreMinimal.h"
 #include "FastNoiseWrapper.h"
 #include "Biome/Biome.h"
-#include "Biome/NoiseInfo.h"
 #include "Bloxels/Voxel/VoxelRegistry/VoxelRegistry.h"
 #include "Engine/TriggerVolume.h"
 #include "GameFramework/Actor.h"
 #include "VoxelWorld.generated.h"
 
 class AVoxelChunk;
-class UVoxelConfig;
 struct FBiomeProperties;
+class UWorldGenerationConfig;
 
 UCLASS()
 class BLOXELS_API AVoxelWorld : public AActor
@@ -25,30 +24,33 @@ public:
 
     virtual void BeginPlay() override;
     
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Data")
-    UDataTable* BiomeDataTable;
+    // UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Data")
+    // UDataTable* BiomeDataTable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Config")
+    UWorldGenerationConfig* VoxelWorldConfig;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|World Generation")
     int WorldSize = 2;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|World Generation")
-    float VoxelSize = 100.0f; // 100 is 1 meter which is what minecraft uses
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|World Generation")
-    int32 ChunkSize = 16;
+    // UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|World Generation")
+    // float VoxelSize = 100.0f; // 100 is 1 meter which is what minecraft uses
+    //
+    // UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|World Generation")
+    // int32 ChunkSize = 16;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|World Generation")
     ATriggerVolume* ChunkTriggerVolume = nullptr;
 
     // Biome Noise Settings
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Biome Noise Settings")
-    FNoiseInfo Temperature;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Biome Noise Settings")
-    FNoiseInfo Habitability;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Biome Noise Settings")
-    FNoiseInfo Elevation;
+    // UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Biome Noise Settings")
+    // FNoiseInfo Temperature;
+    //
+    // UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Biome Noise Settings")
+    // FNoiseInfo Habitability;
+    //
+    // UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Biome Noise Settings")
+    // FNoiseInfo Elevation;
 
     UFUNCTION(BlueprintCallable, Category = "Voxel|Player")
     int PlaceBlock(int X, int Y, int Z, int BlockToPlace);
@@ -70,6 +72,7 @@ public:
     int GetTerrainHeight(int X, int Y, EBiome Biome) const;
     int16 GetVoxelAtWorldCoordinates(int X, int Y, int Z);
     UVoxelRegistry* GetVoxelRegistry() const;
+    UWorldGenerationConfig* GetWorldGenerationConfig() const;
     void TryCreateNewChunk(int32 ChunkX, int32 ChunkY, int32 ChunkZ, bool bShouldGenMesh);
 
 private:

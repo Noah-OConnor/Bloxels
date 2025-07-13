@@ -4,6 +4,7 @@
 #include "VoxelChunk.h"
 
 #include "VoxelChunkAsync.h"
+#include "Bloxels/Voxel/World/WorldGenerationConfig.h"
 #include "Tasks/Task.h"
 
 
@@ -19,9 +20,11 @@ void AVoxelChunk::InitializeChunk(AVoxelWorld* InVoxelWorld, int32 ChunkX, int32
 	VoxelWorld = InVoxelWorld;
 	ChunkCoords = FIntVector(ChunkX, ChunkY, ChunkZ);
 	bGenerateMesh = bShouldGenMesh;
+    
+    const int ChunkSize = VoxelWorld->GetWorldGenerationConfig()->ChunkSize;
 
 	// Initialize Voxel Data Size ***THIS SHOULD NOT CHANGE ANYWHERE AFTER ITS SET***
-	VoxelData.SetNum(VoxelWorld->ChunkSize * VoxelWorld->ChunkSize * VoxelWorld->ChunkSize);
+	VoxelData.SetNum(ChunkSize * ChunkSize * ChunkSize);
 
 	GenerateChunkDataAsync();
 }
@@ -246,28 +249,32 @@ void AVoxelChunk::UnloadChunk()
 
 bool AVoxelChunk::IsVoxelInChunk(int X, int Y, int Z) const
 {
+    const int ChunkSize = VoxelWorld->GetWorldGenerationConfig()->ChunkSize;
+    
     if (!IsValid(VoxelWorld)) return false;
 	// returns true if the voxel is within the chunk bounds
-    return (X >= 0 && X < VoxelWorld->ChunkSize &&
-        Y >= 0 && Y < VoxelWorld->ChunkSize &&
-        Z >= 0 && Z < VoxelWorld->ChunkSize);
+    return (X >= 0 && X < ChunkSize &&
+        Y >= 0 && Y < ChunkSize &&
+        Z >= 0 && Z < ChunkSize);
 }
 
 /// <returns>Returns true when voxel is transparent or outside the chunk</returns>
 bool AVoxelChunk::CheckVoxel(int X, int Y, int Z, FIntVector ChunkCoord)
 {
+    const int ChunkSize = VoxelWorld->GetWorldGenerationConfig()->ChunkSize;
+    
     if (!IsValid(VoxelWorld)) return false;
     if (IsVoxelInChunk(X, Y, Z))
     {
         if (!IsValid(VoxelWorld)) return false;
-        int16 NeighborType = VoxelData[(Z * VoxelWorld->ChunkSize * VoxelWorld->ChunkSize) + (Y * VoxelWorld->ChunkSize) + X];
+        int16 NeighborType = VoxelData[(Z * ChunkSize * ChunkSize) + (Y * ChunkSize) + X];
         return VoxelWorld->GetVoxelRegistry()->GetVoxelByID(NeighborType)->bIsTransparent;
     }
     else
     {
         if (!IsValid(VoxelWorld)) return false;
-        int WorldX = ChunkCoord.X * VoxelWorld->ChunkSize + X;
-        int WorldY = ChunkCoord.Y * VoxelWorld->ChunkSize + Y;
+        int WorldX = ChunkCoord.X * ChunkSize + X;
+        int WorldY = ChunkCoord.Y * ChunkSize + Y;
         int16 NeighborType = VoxelWorld->GetVoxelAtWorldCoordinates(WorldX, WorldY, Z);
         return VoxelWorld->GetVoxelRegistry()->GetVoxelByID(NeighborType)->bIsTransparent;
     }

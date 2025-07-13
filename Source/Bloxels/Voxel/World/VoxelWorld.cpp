@@ -2,6 +2,7 @@
 
 #include "VoxelWorld.h"
 #include "DrawDebugHelpers.h"
+#include "WorldGenerationConfig.h"
 #include "Biome/BiomeProperties.h"
 #include "Bloxels/Voxel/Chunk/VoxelChunk.h"
 #include "Bloxels/Voxel/VoxelRegistry/VoxelRegistry.h"
@@ -17,7 +18,11 @@ void AVoxelWorld::BeginPlay()
 {
     Super::BeginPlay();
 
-    UE_LOG(LogTemp, Warning, TEXT("WorldSizeInChunks: %d"), WorldSize);
+    if (!VoxelWorldConfig)
+    {
+        UE_LOG(LogTemp, Error, TEXT("VoxelWorldConfig is NULL"));
+        return;
+    }
 
     InitializeNoiseLayers();
 
@@ -32,27 +37,27 @@ void AVoxelWorld::InitializeNoiseLayers()
 {
     // Setup Temperature Noise
     TemperatureNoise = NewObject<UFastNoiseWrapper>();
-    TemperatureNoise->SetupFastNoise(Temperature.NoiseType); // Set noise type
-    TemperatureNoise->SetFrequency(Temperature.NoiseFrequency);
-    TemperatureNoise->SetFractalType(Temperature.NoiseFractalType);
-    TemperatureNoise->SetOctaves(Temperature.NoiseOctaves);
-    TemperatureNoise->SetSeed(Temperature.NoiseSeed);
+    TemperatureNoise->SetupFastNoise(VoxelWorldConfig->Temperature.NoiseType); // Set noise type
+    TemperatureNoise->SetFrequency(VoxelWorldConfig->Temperature.NoiseFrequency);
+    TemperatureNoise->SetFractalType(VoxelWorldConfig->Temperature.NoiseFractalType);
+    TemperatureNoise->SetOctaves(VoxelWorldConfig->Temperature.NoiseOctaves);
+    TemperatureNoise->SetSeed(VoxelWorldConfig->Temperature.NoiseSeed);
 
     // Setup Habitability Noise
     HabitabilityNoise = NewObject<UFastNoiseWrapper>();
-    HabitabilityNoise->SetupFastNoise(Habitability.NoiseType); // Set noise type
-    HabitabilityNoise->SetFrequency(Habitability.NoiseFrequency);
-    HabitabilityNoise->SetFractalType(Habitability.NoiseFractalType);
-    HabitabilityNoise->SetOctaves(Habitability.NoiseOctaves);
-    HabitabilityNoise->SetSeed(Habitability.NoiseSeed);
+    HabitabilityNoise->SetupFastNoise(VoxelWorldConfig->Habitability.NoiseType); // Set noise type
+    HabitabilityNoise->SetFrequency(VoxelWorldConfig->Habitability.NoiseFrequency);
+    HabitabilityNoise->SetFractalType(VoxelWorldConfig->Habitability.NoiseFractalType);
+    HabitabilityNoise->SetOctaves(VoxelWorldConfig->Habitability.NoiseOctaves);
+    HabitabilityNoise->SetSeed(VoxelWorldConfig->Habitability.NoiseSeed);
 
     // Setup Elevation Noise
     ElevationNoise = NewObject<UFastNoiseWrapper>();
-    ElevationNoise->SetupFastNoise(Elevation.NoiseType); // Set noise type
-    ElevationNoise->SetFrequency(Elevation.NoiseFrequency);
-    ElevationNoise->SetFractalType(Elevation.NoiseFractalType);
-    ElevationNoise->SetOctaves(Elevation.NoiseOctaves);
-    ElevationNoise->SetSeed(Elevation.NoiseSeed);
+    ElevationNoise->SetupFastNoise(VoxelWorldConfig->Elevation.NoiseType); // Set noise type
+    ElevationNoise->SetFrequency(VoxelWorldConfig->Elevation.NoiseFrequency);
+    ElevationNoise->SetFractalType(VoxelWorldConfig->Elevation.NoiseFractalType);
+    ElevationNoise->SetOctaves(VoxelWorldConfig->Elevation.NoiseOctaves);
+    ElevationNoise->SetSeed(VoxelWorldConfig->Elevation.NoiseSeed);
 }
 
 void AVoxelWorld::DelayedGenerateWorld()
@@ -92,6 +97,9 @@ void AVoxelWorld::InitializePlayer()
     PlayerPawn = UGameplayStatics::GetPlayerController(GetWorld(), 0)->GetPawn();
     if (PlayerPawn)
     {
+        const int ChunkSize = VoxelWorldConfig->ChunkSize;
+        const int VoxelSize = VoxelWorldConfig->VoxelSize;
+        
         PlayerPawn->SetActorLocation(FVector((ChunkSize * VoxelSize) / 2, (ChunkSize * VoxelSize) / 2, (ChunkSize * VoxelSize) / 4));
 
 		//AGauntletCharacter* GauntletCharacter = Cast<AGauntletCharacter>(PlayerPawn);
@@ -117,6 +125,9 @@ void AVoxelWorld::InitializeTriggerVolume()
 
         if (ChunkTriggerVolume)
         {
+            const int ChunkSize = VoxelWorldConfig->ChunkSize;
+            const int VoxelSize = VoxelWorldConfig->VoxelSize;
+            
             UBrushComponent* BrushComponent = ChunkTriggerVolume->GetBrushComponent();
             BrushComponent->SetMobility(EComponentMobility::Movable);
             ChunkTriggerVolume->SetActorScale3D(FVector((ChunkSize / 2) * VoxelSize / 100.0f, (ChunkSize / 2) * VoxelSize / 100.0f, ChunkSize * VoxelSize / 100.0f));
@@ -152,6 +163,9 @@ void AVoxelWorld::TryCreateNewChunk(int32 ChunkX, int32 ChunkY, int32 ChunkZ, bo
         }
         else
         {
+            const int ChunkSize = VoxelWorldConfig->ChunkSize;
+            const int VoxelSize = VoxelWorldConfig->VoxelSize;
+            
             FVector Location(ChunkX * ChunkSize * VoxelSize, ChunkY * ChunkSize * VoxelSize, ChunkZ * ChunkSize * VoxelSize);
             //UE_LOG(LogTemp, Warning, TEXT("Spawning new chunk at World Location: (%f, %f, %f)"), Location.X, Location.Y, Location.Z);
             FActorSpawnParameters SpawnParams;
@@ -193,6 +207,9 @@ void AVoxelWorld::OnChunkExit(AActor* OverlappedActor, AActor* OtherActor)
 {
     if (OtherActor == PlayerPawn)
     {
+        const int ChunkSize = VoxelWorldConfig->ChunkSize;
+        const int VoxelSize = VoxelWorldConfig->VoxelSize;
+        
         const FVector PlayerPosition = PlayerPawn->GetActorLocation();
         const FIntVector NewChunk = FIntVector(
             FMath::FloorToInt(PlayerPosition.X / (ChunkSize * VoxelSize)),
@@ -238,6 +255,8 @@ void AVoxelWorld::UpdateChunks()
 
 int AVoxelWorld::PlaceBlock(const int X, const int Y, const int Z, const int BlockToPlace)
 {
+    const int ChunkSize = VoxelWorldConfig->ChunkSize;
+    
 	// Find the chunk that contains this voxel
 	const int ChunkX = FMath::FloorToInt(static_cast<float>(X) / (ChunkSize));
 	const int ChunkY = FMath::FloorToInt(static_cast<float>(Y) / (ChunkSize));
@@ -318,6 +337,9 @@ void AVoxelWorld::UpdateTriggerVolume(FVector PlayerPosition) const
     {
         //UE_LOG(LogTemp, Log, TEXT("Updating Trigger Volume at Position: %s"), *PlayerPosition.ToString());
         
+        const int ChunkSize = VoxelWorldConfig->ChunkSize;
+        const int VoxelSize = VoxelWorldConfig->VoxelSize;
+        
         FVector ChunkCenter = FVector(
             (CurrentChunk.X + 0.5f) * ChunkSize * VoxelSize,
             (CurrentChunk.Y + 0.5f) * ChunkSize * VoxelSize,
@@ -338,22 +360,22 @@ EBiome AVoxelWorld::GetBiome(int X, int Y) const
     float temperature = 0;
     float habitability = 0;
     float elevation = 0;
-    if (Temperature.UseThisNoise)
+    if (VoxelWorldConfig->Temperature.UseThisNoise)
     {
         temperature = (TemperatureNoise->GetNoise2D(X, Y) + 1) / 2;
     }
-    if (Habitability.UseThisNoise)
+    if (VoxelWorldConfig->Habitability.UseThisNoise)
     {
         habitability = (HabitabilityNoise->GetNoise2D(X, Y) + 1) / 2;
     }
-    if (Elevation.UseThisNoise)
+    if (VoxelWorldConfig->Elevation.UseThisNoise)
     {
         elevation = (ElevationNoise->GetNoise2D(X, Y) + 1) / 2;
     }
 
     static const FString ContextString(TEXT("Biome Properties Context"));
     TArray<FBiomeProperties*> AllRows;
-    BiomeDataTable->GetAllRows(ContextString, AllRows);
+    VoxelWorldConfig->BiomeDataTable->GetAllRows(ContextString, AllRows);
 
     for (const FBiomeProperties* Row : AllRows)
     {
@@ -375,29 +397,29 @@ EBiome AVoxelWorld::GetBiome(int X, int Y) const
 int AVoxelWorld::GetTerrainHeight(int X, int Y, EBiome Biome) const
 {
     // default baseheight in case we're not using any noise layers
-    float BaseHeight = ChunkSize / 2;
+    float BaseHeight = VoxelWorldConfig->ChunkSize / 2;
     
     // STEP 1: set up base noise
-    if (Elevation.UseThisNoise)
+    if (VoxelWorldConfig->Elevation.UseThisNoise)
     {
         float elevation = (ElevationNoise->GetNoise2D(X, Y) + 1) / 2;
-        BaseHeight = Elevation.NoiseCurve->GetFloatValue(elevation) / 2;
+        BaseHeight = VoxelWorldConfig->Elevation.NoiseCurve->GetFloatValue(elevation) / 2;
     }
 
     // STEP 2: Add biome specific noise
 
 
 
-    return BaseHeight * ChunkSize;
+    return BaseHeight * VoxelWorldConfig->ChunkSize;
 }
 
 const FBiomeProperties* AVoxelWorld::GetBiomeData(EBiome Biome) const
 {
-    if (BiomeDataTable)
+    if (VoxelWorldConfig->BiomeDataTable)
     {
         FString ContextString;
         TArray<FBiomeProperties*> AllRows;
-        BiomeDataTable->GetAllRows(ContextString, AllRows);
+        VoxelWorldConfig->BiomeDataTable->GetAllRows(ContextString, AllRows);
 
         for (const FBiomeProperties* Row : AllRows)
         {
@@ -412,9 +434,12 @@ const FBiomeProperties* AVoxelWorld::GetBiomeData(EBiome Biome) const
 
 int16 AVoxelWorld::GetVoxelAtWorldCoordinates(int X, int Y, int Z)
 {
+    const int ChunkSize = VoxelWorldConfig->ChunkSize;
+
     const int ChunkX = FMath::FloorToInt(static_cast<float>(X) / ChunkSize);
     const int ChunkY = FMath::FloorToInt(static_cast<float>(Y) / ChunkSize);
     const int ChunkZ = FMath::FloorToInt(static_cast<float>(Z) / ChunkSize);
+
     const int LocalX = (X % ChunkSize + ChunkSize) % ChunkSize;
     const int LocalY = (Y % ChunkSize + ChunkSize) % ChunkSize;
     const int LocalZ = (Z % ChunkSize + ChunkSize) % ChunkSize;
@@ -438,4 +463,9 @@ int16 AVoxelWorld::GetVoxelAtWorldCoordinates(int X, int Y, int Z)
 UVoxelRegistry* AVoxelWorld::GetVoxelRegistry() const
 {
     return GetGameInstance()->GetSubsystem<UVoxelRegistry>();
+}
+
+UWorldGenerationConfig* AVoxelWorld::GetWorldGenerationConfig() const
+{
+    return VoxelWorldConfig;
 }

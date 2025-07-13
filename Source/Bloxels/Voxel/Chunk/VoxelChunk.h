@@ -70,6 +70,4 @@ private:
 	void GenerateChunkMeshAsync();
 	
 	void DisplayMesh();
-	
-	uint16 GetVoxelTypeForPosition(int Z, int TerrainHeight, const FBiomeProperties* BiomeData) const;
 };
