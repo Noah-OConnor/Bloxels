@@ -1,4 +1,4 @@
-// Copyright 2025 Noah O'Connor. All rights reserved.
+// Copyright 2025 Bloxels. All rights reserved.
 
 #pragma once
 

@@ -1,3 +1,5 @@
+// Copyright 2025 Bloxels. All rights reserved.
+
 #pragma once
 
 #include "CoreMinimal.h"

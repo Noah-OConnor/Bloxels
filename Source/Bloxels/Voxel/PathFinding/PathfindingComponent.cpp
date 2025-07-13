@@ -1,3 +1,5 @@
+// Copyright 2025 Bloxels. All rights reserved.
+
 #include "PathfindingComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Containers/Queue.h"

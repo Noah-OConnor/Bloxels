@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿// Copyright 2025 Bloxels. All rights reserved.
+
+#pragma once
 
 #include "Biome/NoiseInfo.h"
 #include "WorldGenerationConfig.generated.h"

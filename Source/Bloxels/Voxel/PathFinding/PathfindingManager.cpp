@@ -1,3 +1,6 @@
+// Copyright 2025 Bloxels. All rights reserved.
+
+
 #include "PathfindingManager.h"
 
 #include "NeighborResult.h"
