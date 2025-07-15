@@ -14,5 +14,6 @@ enum class EBiome : uint8 {
     Plains,
     Desert,
     Jungle,
-    RockyMountain
+    RockyMountain,
+    Forest
 };

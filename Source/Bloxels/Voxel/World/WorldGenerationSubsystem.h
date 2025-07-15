@@ -20,6 +20,8 @@ public:
     FName GetVoxelTypeForPosition(int Z, int TerrainHeight, const FBiomeProperties* BiomeData) const;
     FName GetVoxelAtPosition(int X, int Y, int Z) const;
     const FBiomeProperties* GetBiomeData(EBiome Biome) const;
+    void LoadStructureAt(const FString& FileName, const FIntVector& OriginWorldCoords);
+
 
 private:
     UPROPERTY()
