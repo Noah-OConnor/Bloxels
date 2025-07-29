@@ -6,7 +6,6 @@
 #include "FastNoiseWrapper.h"
 #include "WorldGenerationSubsystem.h"
 #include "Bloxels/Voxel/VoxelRegistry/VoxelRegistrySubsystem.h"
-#include "Engine/TriggerVolume.h"
 #include "GameFramework/Actor.h"
 #include "VoxelWorld.generated.h"
 
@@ -24,14 +23,13 @@ public:
 
     virtual void BeginPlay() override;
 
+    virtual void Tick(float DeltaTime) override;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|Config")
     UWorldGenerationConfig* VoxelWorldConfig;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|World Generation")
     int WorldSize = 2;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel|World Generation")
-    ATriggerVolume* ChunkTriggerVolume = nullptr;
 
     UFUNCTION(BlueprintCallable, Category = "Voxel|Player")
     int PlaceBlock(int X, int Y, int Z, int BlockToPlace);
@@ -63,18 +61,12 @@ private:
 
     UPROPERTY()
     APawn* PlayerPawn;
-
-    UFUNCTION()
-    void OnChunkExit(AActor* OverlappedActor, AActor* OtherActor);
     
     FIntVector CurrentChunk = FIntVector(0, 0, 0);
     FIntVector PreviousChunk = FIntVector(0, 0, 0);
     bool bIsShuttingDown = false;
 
-    void InitializeTriggerVolume();
-    void DelayedGenerateWorld();
     void GenerateInitialWorld();
     void InitializePlayer();
-    void UpdateTriggerVolume(FVector PlayerPosition) const;
     void UpdateChunks();
 };

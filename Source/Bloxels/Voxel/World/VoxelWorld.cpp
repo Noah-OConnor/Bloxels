@@ -6,7 +6,6 @@
 #include "WorldGenerationSubsystem.h"
 #include "Bloxels/Voxel/Chunk/VoxelChunk.h"
 #include "Bloxels/Voxel/VoxelRegistry/VoxelRegistrySubsystem.h"
-#include "Components/BrushComponent.h"
 #include "Kismet/GameplayStatics.h"
 
 AVoxelWorld::AVoxelWorld(): VoxelWorldConfig(nullptr),
@@ -33,33 +32,37 @@ void AVoxelWorld::BeginPlay()
         WorldGenSubsystem->InitializeConfig(VoxelWorldConfig);
     }
 
-    FTimerHandle DelayWorldGenTimer;
-    GetWorldTimerManager().SetTimer(DelayWorldGenTimer, this, &AVoxelWorld::DelayedGenerateWorld, 0.1f, false);
-
+    GenerateInitialWorld();
     InitializePlayer();
-    InitializeTriggerVolume();
 }
 
-void AVoxelWorld::DelayedGenerateWorld()
+void AVoxelWorld::Tick(float DeltaTime)
 {
-    // Ensure voxel registry is ready
-    UVoxelRegistrySubsystem* Registry = GetVoxelRegistry();
-    if (!Registry || Registry->VoxelAssets.Num() == 0)
+    Super::Tick(DeltaTime);
+
+    if (!PlayerPawn) return;
+    
+    const int ChunkSize = VoxelWorldConfig->ChunkSize;
+    const int VoxelSize = VoxelWorldConfig->VoxelSize;
+
+    const FVector PlayerPosition = PlayerPawn->GetActorLocation();
+    
+    CurrentChunk = FIntVector(
+        FMath::FloorToInt(PlayerPosition.X / (ChunkSize * VoxelSize)),
+        FMath::FloorToInt(PlayerPosition.Y / (ChunkSize * VoxelSize)),
+        FMath::FloorToInt(PlayerPosition.Z / (ChunkSize * VoxelSize))
+    );
+
+    if (CurrentChunk != PreviousChunk)
     {
-        UE_LOG(LogTemp, Warning, TEXT("VoxelRegistry not ready, delaying again..."));
-        FTimerHandle RetryTimer;
-        GetWorldTimerManager().SetTimer(RetryTimer, this, &AVoxelWorld::DelayedGenerateWorld, 0.1f, false);
-        return;
+        UpdateChunks();
     }
 
-    //UE_LOG(LogTemp, Warning, TEXT("VoxelRegistry ready. Generating initial world."));
-    GenerateInitialWorld();
+    PreviousChunk = CurrentChunk;
 }
 
 void AVoxelWorld::GenerateInitialWorld()
 {
-    //UE_LOG(LogTemp, Error, TEXT("GENERATE INITIAL WORLD"));
-    CurrentChunk = FIntVector(0, 0, 10);
     UE_LOG(LogTemp, Error, TEXT("CURRENT CHUNK: %d, %d, %d"), CurrentChunk.X, CurrentChunk.Y, CurrentChunk.Z);
     for (int X = CurrentChunk.X - WorldSize; X <= CurrentChunk.X + WorldSize; X++)
     {
@@ -67,7 +70,6 @@ void AVoxelWorld::GenerateInitialWorld()
         {
             for (int Z = CurrentChunk.Z - WorldSize; Z <= CurrentChunk.Z + WorldSize; Z++)
             {
-                //UE_LOG(LogTemp, Warning, TEXT("Creating chunk at: %d %d %d"), X, Y, Z);
                 TryCreateNewChunk(X, Y, Z, true);
             }
         }
@@ -81,11 +83,10 @@ void AVoxelWorld::InitializePlayer()
     {
         const int ChunkSize = VoxelWorldConfig->ChunkSize;
         const int VoxelSize = VoxelWorldConfig->VoxelSize;
-        
-        PlayerPawn->SetActorLocation(FVector((ChunkSize * VoxelSize) / 2, (ChunkSize * VoxelSize) / 2, (ChunkSize * VoxelSize) / 4));
 
-		//AGauntletCharacter* GauntletCharacter = Cast<AGauntletCharacter>(PlayerPawn);
-		//GauntletCharacter->VoxelWorld = this; // Set the VoxelWorld reference in the character
+        UWorldGenerationSubsystem* WorldGenSubsystem = GetWorldGenerationSubsystem();
+        
+        PlayerPawn->SetActorLocation(FVector(0, 0, WorldGenSubsystem->GetTerrainHeight(0,0, WorldGenSubsystem->GetBiome(0, 0)) * VoxelSize + 200));
     
         FVector PlayerPosition = PlayerPawn->GetActorLocation();
     
@@ -93,32 +94,9 @@ void AVoxelWorld::InitializePlayer()
             FMath::FloorToInt(PlayerPosition.X / (ChunkSize * VoxelSize)),
             FMath::FloorToInt(PlayerPosition.Y / (ChunkSize * VoxelSize)),
             FMath::FloorToInt(PlayerPosition.Z / (ChunkSize * VoxelSize))
-            
         );
     }
     PreviousChunk = CurrentChunk;
-}
-
-void AVoxelWorld::InitializeTriggerVolume()
-{
-    if (PlayerPawn)
-    {
-        FVector PlayerPosition = PlayerPawn->GetActorLocation();
-
-        if (ChunkTriggerVolume)
-        {
-            const int ChunkSize = VoxelWorldConfig->ChunkSize;
-            const int VoxelSize = VoxelWorldConfig->VoxelSize;
-            
-            UBrushComponent* BrushComponent = ChunkTriggerVolume->GetBrushComponent();
-            BrushComponent->SetMobility(EComponentMobility::Movable);
-            ChunkTriggerVolume->SetActorScale3D(FVector((ChunkSize / 2) * VoxelSize / 100.0f, (ChunkSize / 2) * VoxelSize / 100.0f, ChunkSize * VoxelSize / 100.0f));
-            ChunkTriggerVolume->OnActorEndOverlap.AddDynamic(this, &AVoxelWorld::OnChunkExit);
-
-            //UpdateChunks(PlayerPosition);
-            UpdateTriggerVolume(PlayerPosition);
-        }
-    }
 }
 
 void AVoxelWorld::TryCreateNewChunk(int32 ChunkX, int32 ChunkY, int32 ChunkZ, bool bShouldGenMesh)
@@ -185,31 +163,6 @@ void AVoxelWorld::TryCreateNewChunk(int32 ChunkX, int32 ChunkY, int32 ChunkZ, bo
     }
 }
 
-void AVoxelWorld::OnChunkExit(AActor* OverlappedActor, AActor* OtherActor)
-{
-    if (OtherActor == PlayerPawn)
-    {
-        const int ChunkSize = VoxelWorldConfig->ChunkSize;
-        const int VoxelSize = VoxelWorldConfig->VoxelSize;
-        
-        const FVector PlayerPosition = PlayerPawn->GetActorLocation();
-        const FIntVector NewChunk = FIntVector(
-            FMath::FloorToInt(PlayerPosition.X / (ChunkSize * VoxelSize)),
-            FMath::FloorToInt(PlayerPosition.Y / (ChunkSize * VoxelSize)),
-            FMath::FloorToInt(PlayerPosition.Z / (ChunkSize * VoxelSize))
-        );
-
-        if (NewChunk != CurrentChunk)
-        {
-            PreviousChunk = CurrentChunk;
-            CurrentChunk = NewChunk;
-            GenerateInitialWorld();
-            UpdateTriggerVolume(PlayerPosition);
-            UpdateChunks();
-        }
-    }
-}
-
 void AVoxelWorld::UpdateChunks()  
 {  
     UE_LOG(LogTemp, Warning, TEXT("UPDATE CHUNKS"));
@@ -221,9 +174,10 @@ void AVoxelWorld::UpdateChunks()
         if (AVoxelChunk* Chunk = Pair.Value)  
         {  
             if (FMath::Abs(Chunk->ChunkCoords.X - CurrentChunk.X) > WorldSize + 1 ||  
-                FMath::Abs(Chunk->ChunkCoords.Y - CurrentChunk.Y) > WorldSize + 1)  
+                FMath::Abs(Chunk->ChunkCoords.Y - CurrentChunk.Y) > WorldSize + 1 || 
+                FMath::Abs(Chunk->ChunkCoords.Z - CurrentChunk.Z) > WorldSize + 1) 
             {
-                UE_LOG(LogTemp, Warning, TEXT("MARKING FOR UNLOAD (%d, %d)"), Chunk->ChunkCoords.X, Chunk->ChunkCoords.Y);
+                UE_LOG(LogTemp, Warning, TEXT("MARKING FOR UNLOAD (%d, %d, %d)"), Chunk->ChunkCoords.X, Chunk->ChunkCoords.Y, Chunk->ChunkCoords.Z);
                 ChunksToUnload.Add(Chunk);
             }  
         }  
@@ -233,6 +187,8 @@ void AVoxelWorld::UpdateChunks()
     {
         Chunk->UnloadChunk();
     }
+
+    GenerateInitialWorld();
 }
 
 int AVoxelWorld::PlaceBlock(const int X, const int Y, const int Z, const int BlockToPlace)
@@ -311,30 +267,6 @@ int AVoxelWorld::PlaceBlock(const int X, const int Y, const int Z, const int Blo
 		UE_LOG(LogTemp, Warning, TEXT("Chunk (%d, %d) not found for voxel placement at (%d, %d, %d)!"), ChunkX, ChunkY, X, Y, Z);
 	}
     return GetVoxelRegistry()->GetIDFromName("Air");
-}
-
-void AVoxelWorld::UpdateTriggerVolume(FVector PlayerPosition) const
-{
-    if (ChunkTriggerVolume)
-    {
-        //UE_LOG(LogTemp, Log, TEXT("Updating Trigger Volume at Position: %s"), *PlayerPosition.ToString());
-        
-        const int ChunkSize = VoxelWorldConfig->ChunkSize;
-        const int VoxelSize = VoxelWorldConfig->VoxelSize;
-        
-        FVector ChunkCenter = FVector(
-            (CurrentChunk.X + 0.5f) * ChunkSize * VoxelSize,
-            (CurrentChunk.Y + 0.5f) * ChunkSize * VoxelSize,
-            0.0f
-        );
-        ChunkTriggerVolume->SetActorLocation(ChunkCenter);
-        /*DrawDebugBox(GetWorld(), ChunkTriggerVolume->GetActorLocation(), ChunkTriggerVolume->GetComponentsBoundingBox().GetExtent(),
-            FColor::Orange, true, -1, 0, 5);*/
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("ChunkTriggerVolume is null!"));
-    }
 }
 
 int16 AVoxelWorld::GetVoxelAtWorldCoordinates(int X, int Y, int Z)

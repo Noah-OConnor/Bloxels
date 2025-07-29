@@ -5,7 +5,6 @@
 #include <functional>
 
 #include "VoxelChunk.h"
-#include "Bloxels/Voxel/World/Biome/BiomeProperties.h"
 #include "Tasks/Task.h"
 #include "Async/Async.h"
 #include "Bloxels/Voxel/World/WorldGenerationConfig.h"
