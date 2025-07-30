@@ -32,8 +32,8 @@ void AVoxelWorld::BeginPlay()
         WorldGenSubsystem->InitializeConfig(VoxelWorldConfig);
     }
 
-    GenerateInitialWorld();
     InitializePlayer();
+    GenerateInitialWorld();
 }
 
 void AVoxelWorld::Tick(float DeltaTime)
@@ -59,6 +59,34 @@ void AVoxelWorld::Tick(float DeltaTime)
     }
 
     PreviousChunk = CurrentChunk;
+
+    int32 Count = 0;
+    while (Count < ChunksToDeletePerFrame)
+    {
+        if (ChunksToDeleteQueue.Num() > 0)
+        {
+            AVoxelChunk* NextChunk = ChunksToDeleteQueue[0];
+            ChunksToDeleteQueue.Remove(NextChunk);
+            NextChunk->UnloadChunk();
+        }
+        else break;
+
+        Count++;
+    }
+
+    Count = 0;
+    while (Count < ChunkMeshesPerFrame)
+    {
+        if (ChunkMeshUpdateQueue.Num() > 0)
+        {
+            AVoxelChunk* NextChunk = ChunkMeshUpdateQueue[0];
+            ChunkMeshUpdateQueue.Remove(NextChunk);
+            NextChunk->DisplayMesh();
+        }
+        else break;
+
+        Count++;
+    }
 }
 
 void AVoxelWorld::GenerateInitialWorld()
@@ -112,7 +140,7 @@ void AVoxelWorld::TryCreateNewChunk(int32 ChunkX, int32 ChunkY, int32 ChunkZ, bo
             AVoxelChunk* Chunk = *Chunks.Find(ChunkCoords);
             if (Chunk && bShouldGenMesh)
             {
-                Chunk->bGenerateMesh = true;
+                Chunk->bGenerateMesh = bShouldGenMesh;
 
                 if (Chunk->bHasData)
                 {
@@ -136,8 +164,21 @@ void AVoxelWorld::TryCreateNewChunk(int32 ChunkX, int32 ChunkY, int32 ChunkZ, bo
                 //UE_LOG(LogTemp, Warning, TEXT("Chunk (%d, %d) already exists! Skipping."), ChunkX, ChunkY); 
                 return;
             }
+            
+            AVoxelChunk* NewChunk;
 
-            AVoxelChunk* NewChunk = GetWorld()->SpawnActor<AVoxelChunk>(AVoxelChunk::StaticClass(), Location, FRotator::ZeroRotator, SpawnParams);
+            if (ChunkPool.Num() > 0)
+            {
+                NewChunk = ChunkPool[0];
+                ChunkPool.RemoveAt(0);
+                NewChunk->SetActorLocation(Location);
+                UE_LOG(LogTemp, Warning, TEXT("USING A POOLED CHUNK INSTEAD OF SPAWNING"));
+            }
+            else
+            {
+                NewChunk = GetWorld()->SpawnActor<AVoxelChunk>(AVoxelChunk::StaticClass(), Location, FRotator::ZeroRotator, SpawnParams);
+                UE_LOG(LogTemp, Error, TEXT("SPAWNED A NEW CHUNK INSTEAD OF POOLING"));
+            }
 
             if (!NewChunk)
             {
@@ -150,9 +191,9 @@ void AVoxelWorld::TryCreateNewChunk(int32 ChunkX, int32 ChunkY, int32 ChunkZ, bo
             #endif
                         NewChunk->InitializeChunk(this, ChunkX, ChunkY, ChunkZ, bShouldGenMesh);
 
-            ChunksLock.WriteLock();
+            //ChunksLock.WriteLock();
             Chunks.Add(FIntVector(ChunkX, ChunkY, ChunkZ), NewChunk);
-            ChunksLock.WriteUnlock();
+            //ChunksLock.WriteUnlock();
 
             //UE_LOG(LogTemp, Warning, TEXT("Chunk (%d, %d) spawned and added to Chunks"), ChunkX, ChunkY);
         }
@@ -163,13 +204,33 @@ void AVoxelWorld::TryCreateNewChunk(int32 ChunkX, int32 ChunkY, int32 ChunkZ, bo
     }
 }
 
+void AVoxelWorld::AddToChunkMeshQueue(AVoxelChunk* Chunk)
+{
+    if (ChunkMeshUpdateQueue.Contains(Chunk))
+    {
+        ChunkMeshUpdateQueue.Remove(Chunk);
+    }
+    
+    ChunkMeshUpdateQueue.Add(Chunk);
+}
+
+void AVoxelWorld::AddToChunkToDeleteQueue(AVoxelChunk* Chunk)
+{
+    if (ChunksToDeleteQueue.Contains(Chunk))
+    {
+        ChunksToDeleteQueue.Remove(Chunk);
+    }
+    
+    ChunksToDeleteQueue.Add(Chunk);
+}
+
 void AVoxelWorld::UpdateChunks()  
 {  
     UE_LOG(LogTemp, Warning, TEXT("UPDATE CHUNKS"));
 
     TArray<AVoxelChunk*> ChunksToUnload;
 
-    for (auto& Pair : ActiveChunks)  
+    for (auto& Pair : Chunks)  
     {
         if (AVoxelChunk* Chunk = Pair.Value)  
         {  
@@ -185,7 +246,8 @@ void AVoxelWorld::UpdateChunks()
 
     for (AVoxelChunk* Chunk : ChunksToUnload)
     {
-        Chunk->UnloadChunk();
+        //Chunk->UnloadChunk();
+        AddToChunkToDeleteQueue(Chunk);
     }
 
     GenerateInitialWorld();
@@ -281,13 +343,14 @@ int16 AVoxelWorld::GetVoxelAtWorldCoordinates(int X, int Y, int Z)
     const int LocalY = (Y % ChunkSize + ChunkSize) % ChunkSize;
     const int LocalZ = (Z % ChunkSize + ChunkSize) % ChunkSize;
 
-    ChunksLock.ReadLock(); 
     TWeakObjectPtr<AVoxelChunk> Chunk;
+    
+    //ChunksLock.ReadLock(); 
     if (Chunks.Contains(FIntVector(ChunkX, ChunkY, ChunkZ)))
     {
         Chunk = Chunks[FIntVector(ChunkX, ChunkY, ChunkZ)];
     }
-    ChunksLock.ReadUnlock();
+    //ChunksLock.ReadUnlock();
 
     if (Chunk.IsValid() && Chunk->IsVoxelInChunk(LocalX, LocalY, LocalZ))
     {

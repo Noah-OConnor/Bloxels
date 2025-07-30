@@ -41,6 +41,8 @@ public:
 	bool CheckVoxel(int X, int Y, int Z, FIntVector ChunkCoord);
 
 	void SetChunkCoords(FIntVector InCoords);
+	
+	void DisplayMesh();
 
 
 	// BOOLS
@@ -68,6 +70,4 @@ private:
 	void GenerateChunkDataAsync();
 	
 	void GenerateChunkMeshAsync();
-	
-	void DisplayMesh();
 };

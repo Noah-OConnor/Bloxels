@@ -171,12 +171,15 @@ void AVoxelChunk::OnMeshGenerated(const TMap<FMeshSectionKey, FMeshData>& InMesh
         }
         WeakThis->MeshSections = InMeshSections;
         WeakThis->bHasMeshSections = true;
-        WeakThis->DisplayMesh();
+        if (InMeshSections.Num() > 0)
+        {
+            WeakThis->VoxelWorld->AddToChunkMeshQueue(WeakThis.Get());
+        }
     });
 }
 
 void AVoxelChunk::DisplayMesh()  
-{  
+{
    MeshComponent->ClearAllMeshSections(); // Clear existing mesh sections before displaying new ones;  
 
    // Apply mesh sections for each voxel type   
@@ -227,23 +230,31 @@ void AVoxelChunk::DisplayMesh()
        }  
    }  
 
-   VoxelWorld->ActiveChunksLock.WriteLock();  
+   //VoxelWorld->ActiveChunksLock.WriteLock();  
    VoxelWorld->ActiveChunks.Add(ChunkCoords, this);  
-   VoxelWorld->ActiveChunksLock.WriteUnlock();
+   //VoxelWorld->ActiveChunksLock.WriteUnlock();
 }
 
 void AVoxelChunk::UnloadChunk()
 {
-    VoxelWorld->ActiveChunksLock.WriteLock();
+    //VoxelWorld->ActiveChunksLock.WriteLock();
     VoxelWorld->ActiveChunks.Remove(ChunkCoords);
-    VoxelWorld->ActiveChunksLock.WriteUnlock();
+    //VoxelWorld->ActiveChunksLock.WriteUnlock();
 
-    VoxelWorld->ChunksLock.WriteLock();
+    //VoxelWorld->ChunksLock.WriteLock();
     VoxelWorld->Chunks.Remove(ChunkCoords);
-    VoxelWorld->ChunksLock.WriteUnlock();
+    //VoxelWorld->ChunksLock.WriteUnlock();
 
     MeshComponent->ClearAllMeshSections();
-    this->Destroy();
+
+    bGenerateMesh = false;
+    bHasData = false;
+    bHasMeshSections = false;
+
+    VoxelWorld->ChunkPool.Add(this);
+    //UE_LOG(LogTemp, Error, TEXT("ADDED CHUNK TO POOL INSTEAD OF DELETING"));
+
+    //this->Destroy();
 }
 
 bool AVoxelChunk::IsVoxelInChunk(int X, int Y, int Z) const

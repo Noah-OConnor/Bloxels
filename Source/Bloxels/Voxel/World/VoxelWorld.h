@@ -42,8 +42,8 @@ public:
     TMap<FIntVector, AVoxelChunk*> ActiveChunks;
 
     
-    mutable FRWLock ChunksLock;
-    mutable FRWLock ActiveChunksLock;
+    //mutable FRWLock ChunksLock;
+    //mutable FRWLock ActiveChunksLock;
     
     int16 GetVoxelAtWorldCoordinates(int X, int Y, int Z);
     UVoxelRegistrySubsystem* GetVoxelRegistry() const;
@@ -51,6 +51,21 @@ public:
     UWorldGenerationConfig* GetWorldGenerationConfig() const;
     void TryCreateNewChunk(int32 ChunkX, int32 ChunkY, int32 ChunkZ, bool bShouldGenMesh);
 
+    UPROPERTY()
+    TArray<AVoxelChunk*> ChunkMeshUpdateQueue;
+    int32 ChunkMeshesPerFrame = 10;
+
+    void AddToChunkMeshQueue(AVoxelChunk* Chunk);
+
+    UPROPERTY()
+    TArray<AVoxelChunk*> ChunksToDeleteQueue;
+    int32 ChunksToDeletePerFrame = 10;
+
+    void AddToChunkToDeleteQueue(AVoxelChunk* Chunk);
+    
+    UPROPERTY()
+    TArray<AVoxelChunk*> ChunkPool;
+    
 private:
     UPROPERTY()
     UFastNoiseWrapper* TemperatureNoise;
