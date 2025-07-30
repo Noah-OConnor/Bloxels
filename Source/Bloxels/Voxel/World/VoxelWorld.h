@@ -13,6 +13,12 @@ class AVoxelChunk;
 struct FBiomeProperties;
 class UWorldGenerationConfig;
 
+// struct FNewChunk
+// {
+//     FIntVector ChunkCoords;
+//     bool bShouldGenMesh;
+// };
+
 UCLASS()
 class BLOXELS_API AVoxelWorld : public AActor
 {
@@ -42,8 +48,8 @@ public:
     TMap<FIntVector, AVoxelChunk*> ActiveChunks;
 
     
-    //mutable FRWLock ChunksLock;
-    //mutable FRWLock ActiveChunksLock;
+    mutable FRWLock ChunksLock;
+    mutable FRWLock ActiveChunksLock;
     
     int16 GetVoxelAtWorldCoordinates(int X, int Y, int Z);
     UVoxelRegistrySubsystem* GetVoxelRegistry() const;
@@ -52,16 +58,24 @@ public:
     void TryCreateNewChunk(int32 ChunkX, int32 ChunkY, int32 ChunkZ, bool bShouldGenMesh);
 
     UPROPERTY()
-    TArray<AVoxelChunk*> ChunkMeshUpdateQueue;
-    int32 ChunkMeshesPerFrame = 10;
-
-    void AddToChunkMeshQueue(AVoxelChunk* Chunk);
+    TArray<AVoxelChunk*> ChunkUnloadQueue;
+    int32 ChunkUnloadPerFrame = 10;
+    
+    //UPROPERTY()
+    //TArray<FNewChunk> ChunkCreationQueue;
+    //int32 ChunkCreationPerFrame = 10;
 
     UPROPERTY()
-    TArray<AVoxelChunk*> ChunksToDeleteQueue;
-    int32 ChunksToDeletePerFrame = 10;
+    TArray<AVoxelChunk*> ChunkDataGenQueue;
+    int32 ChunkDataGenPerFrame = 10;
 
-    void AddToChunkToDeleteQueue(AVoxelChunk* Chunk);
+    UPROPERTY()
+    TArray<AVoxelChunk*> ChunkMeshGenQueue;
+    int32 ChunkMeshGenPerFrame = 10;
+
+    UPROPERTY()
+    TArray<AVoxelChunk*> ChunkMeshDisplayQueue;
+    int32 ChunkMeshDisplayPerFrame = 10;
     
     UPROPERTY()
     TArray<AVoxelChunk*> ChunkPool;

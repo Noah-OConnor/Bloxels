@@ -25,7 +25,8 @@ void AVoxelChunk::InitializeChunk(AVoxelWorld* InVoxelWorld, int32 ChunkX, int32
 	// Initialize Voxel Data Size ***THIS SHOULD NOT CHANGE ANYWHERE AFTER ITS SET***
 	VoxelData.SetNum(ChunkSize * ChunkSize * ChunkSize);
 
-	GenerateChunkDataAsync();
+    VoxelWorld->ChunkDataGenQueue.Add(this);
+	//GenerateChunkDataAsync();
 }
 
 void AVoxelChunk::GenerateChunkDataAsync()
@@ -112,6 +113,8 @@ void AVoxelChunk::TryGenerateChunkMesh()
             bAllGenerated = false;
             // We need to create the chunk & subscribe to on data generated
             VoxelWorld->TryCreateNewChunk(NeighborCoord.X, NeighborCoord.Y, NeighborCoord.Z, false);
+            //FNewChunk NewChunk = FNewChunk(FIntVector(NeighborCoord.X, NeighborCoord.Y, NeighborCoord.Z), false);
+            //VoxelWorld->ChunkCreationQueue.Add(NewChunk);
 
             NeighborChunk = *VoxelWorld->Chunks.Find(NeighborCoord);
         }
@@ -136,7 +139,8 @@ void AVoxelChunk::TryGenerateChunkMesh()
     {
         //UE_LOG(LogTemp, Display, TEXT("ALL NEIGHBORING CHUNKS ARE GENERATED FOR (%d, %d)"), ChunkCoords.X, ChunkCoords.Y);
 
-        GenerateChunkMeshAsync();
+        VoxelWorld->ChunkMeshGenQueue.Add(this);
+        //GenerateChunkMeshAsync();
     }
 }
 
@@ -171,9 +175,10 @@ void AVoxelChunk::OnMeshGenerated(const TMap<FMeshSectionKey, FMeshData>& InMesh
         }
         WeakThis->MeshSections = InMeshSections;
         WeakThis->bHasMeshSections = true;
-        if (InMeshSections.Num() > 0)
+        if (InMeshSections.Num() > 0 && WeakThis.Get())
         {
-            WeakThis->VoxelWorld->AddToChunkMeshQueue(WeakThis.Get());
+            //WeakThis->VoxelWorld->AddToChunkMeshDisplayQueue(WeakThis.Get());
+            WeakThis->VoxelWorld->ChunkMeshDisplayQueue.Add(WeakThis.Get());
         }
     });
 }
@@ -197,7 +202,7 @@ void AVoxelChunk::DisplayMesh()
        {  
            MeshComponent->CreateMeshSection(  
                SectionIndex, MeshData.Vertices, MeshData.Triangles, MeshData.Normals,  
-               MeshData.UVs, TArray<FColor>(), TArray<FProcMeshTangent>(), true);  
+               MeshData.UVs, TArray<FColor>(), TArray<FProcMeshTangent>(), true);
 
            UMaterialInterface* BaseMaterial = VoxelWorld->GetVoxelRegistry()->GetVoxelByID(SectionKey.VoxelType)->Material;
            // Check if the material is a dynamic material instance and set the TileCountX parameter  
@@ -230,20 +235,20 @@ void AVoxelChunk::DisplayMesh()
        }  
    }  
 
-   //VoxelWorld->ActiveChunksLock.WriteLock();  
+   VoxelWorld->ActiveChunksLock.WriteLock();  
    VoxelWorld->ActiveChunks.Add(ChunkCoords, this);  
-   //VoxelWorld->ActiveChunksLock.WriteUnlock();
+   VoxelWorld->ActiveChunksLock.WriteUnlock();
 }
 
 void AVoxelChunk::UnloadChunk()
 {
-    //VoxelWorld->ActiveChunksLock.WriteLock();
+    VoxelWorld->ActiveChunksLock.WriteLock();
     VoxelWorld->ActiveChunks.Remove(ChunkCoords);
-    //VoxelWorld->ActiveChunksLock.WriteUnlock();
+    VoxelWorld->ActiveChunksLock.WriteUnlock();
 
-    //VoxelWorld->ChunksLock.WriteLock();
+    VoxelWorld->ChunksLock.WriteLock();
     VoxelWorld->Chunks.Remove(ChunkCoords);
-    //VoxelWorld->ChunksLock.WriteUnlock();
+    VoxelWorld->ChunksLock.WriteUnlock();
 
     MeshComponent->ClearAllMeshSections();
 

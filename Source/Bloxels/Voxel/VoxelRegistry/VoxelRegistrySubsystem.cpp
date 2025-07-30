@@ -46,7 +46,6 @@ void UVoxelRegistrySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
         // Register it
         RegisterVoxel(Voxel);
-
     }
 }
 

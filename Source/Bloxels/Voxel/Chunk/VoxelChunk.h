@@ -42,6 +42,10 @@ public:
 
 	void SetChunkCoords(FIntVector InCoords);
 	
+	void GenerateChunkDataAsync();
+	
+	void GenerateChunkMeshAsync();
+	
 	void DisplayMesh();
 
 
@@ -66,8 +70,4 @@ private:
 	
 	TMap<FMeshSectionKey, FMeshData> MeshSections;
 
-	
-	void GenerateChunkDataAsync();
-	
-	void GenerateChunkMeshAsync();
 };
