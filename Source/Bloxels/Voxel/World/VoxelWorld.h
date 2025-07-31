@@ -13,10 +13,8 @@
 #include "GameFramework/Actor.h"
 #include "VoxelWorld.generated.h"
 
-//class AVoxelChunk;
 struct FBiomeProperties;
 class UWorldGenerationConfig;
-//struct FVoxelChunkData;
 
 UCLASS()
 class BLOXELS_API AVoxelWorld : public AActor
@@ -38,16 +36,10 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Voxel|Player")
     int PlaceBlock(int X, int Y, int Z, int BlockToPlace);
-
     
-    //UPROPERTY()
-    //TMap<FIntVector, FVoxelChunkData> Chunks;
-    
-    //UPROPERTY()
     TMap<FIntVector, FVoxelChunkData> ActiveChunks;
-
     
-    mutable FRWLock ActiveChunksLock;
+    //mutable FRWLock ActiveChunksLock;
     
     int16 GetVoxelAtWorldCoordinates(int X, int Y, int Z);
     bool CheckVoxel(int X, int Y, int Z, FIntVector ChunkCoord);
@@ -55,37 +47,27 @@ public:
     UVoxelRegistrySubsystem* GetVoxelRegistry() const;
     UWorldGenerationSubsystem* GetWorldGenerationSubsystem() const;
     UWorldGenerationConfig* GetWorldGenerationConfig() const;
-    //void TryCreateNewChunk(int32 ChunkX, int32 ChunkY, int32 ChunkZ, bool bShouldGenMesh);
-
-    // UPROPERTY()
-    // TArray<AVoxelChunk*> ChunkUnloadQueue;
-    // int32 ChunkUnloadPerFrame = 10;
     
-    //UPROPERTY()
     TQueue<FIntVector> ChunkCreationQueue;
     
     UPROPERTY(EditAnywhere)
     int32 ChunkCreationPerFrame = 10;
 
-    // UPROPERTY()
-    // TArray<AVoxelChunk*> ChunkDataGenQueue;
-    // int32 ChunkDataGenPerFrame = 10;
-
-    //UPROPERTY()
     TQueue<FIntVector> ChunkMeshGenQueue;
     
     UPROPERTY(EditAnywhere)
     int32 ChunkMeshGenPerFrame = 10;
 
-    //PROPERTY()
     TQueue<FIntVector> ChunkMeshDisplayQueue;
     
     UPROPERTY(EditAnywhere)
     int32 ChunkMeshDisplayPerFrame = 10;
-    
-    // UPROPERTY()
-    // TArray<AVoxelChunk*> ChunkPool;
 
+    TQueue<FIntVector> ChunkUnloadQueue;
+    
+    UPROPERTY(EditAnywhere)
+    int32 ChunkUnloadPerFrame = 10;
+    
     TQueue<UProceduralMeshComponent*> MeshPool;
 
     TSet<FIntVector> PendingMeshChunks;
@@ -127,6 +109,7 @@ private:
     void GenerateChunkMeshAsync(FIntVector ChunkCoord, const FVoxelChunkData& ChunkData);
 
     void DisplayChunkMesh(FVoxelChunkData& Chunk);
+    void ProcessChunkUnloadQueue();
     void UnloadChunk(FIntVector ChunkCoords);
 
     UProceduralMeshComponent* GetOrCreateMeshComponent();
