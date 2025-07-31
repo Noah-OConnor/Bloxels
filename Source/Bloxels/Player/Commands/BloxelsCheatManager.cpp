@@ -5,7 +5,6 @@
 #include "DebugSubsystem.h"
 #include "Bloxels/Player/FreeCamera/FreeCameraPawn.h"
 #include "Bloxels/Voxel/PathFinding/PathfindingSubsystem.h"
-#include "Bloxels/Voxel/Chunk/VoxelChunk.h"
 #include "Bloxels/Voxel/World/WorldGenerationConfig.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -197,17 +196,17 @@ void UBloxelsCheatManager::ImportStructure(const FString& FileName)
         ImportedCount++;
     }
 
-    // Regenerate all affected chunks
-    for (const FIntVector& Coord : AffectedChunks)
-    {
-        if (World->Chunks.Contains(Coord))
-        {
-            if (AVoxelChunk* Chunk = World->Chunks[Coord])
-            {
-                Chunk->TryGenerateChunkMesh();
-            }
-        }
-    }
+    // // Regenerate all affected chunks
+    // for (const FIntVector& Coord : AffectedChunks)
+    // {
+    //     if (World->Chunks.Contains(Coord))
+    //     {
+    //         if (AVoxelChunk* Chunk = World->Chunks[Coord])
+    //         {
+    //             Chunk->TryGenerateChunkMesh();
+    //         }
+    //     }
+    // }
     
     UE_LOG(LogTemp, Log, TEXT("ImportStructure complete: %d voxels imported."), ImportedCount);
     UE_LOG(LogTemp, Log, TEXT("Chunks regenerated: %d"), AffectedChunks.Num());

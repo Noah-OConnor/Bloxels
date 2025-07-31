@@ -4,18 +4,17 @@
 
 #include <functional>
 
-#include "VoxelChunk.h"
 #include "Tasks/Task.h"
 #include "Async/Async.h"
 #include "Bloxels/Voxel/World/WorldGenerationConfig.h"
 
 namespace VoxelChunkAsync
 {
-    void GenerateChunkDataAsync(TWeakObjectPtr<AVoxelChunk> Chunk, TWeakObjectPtr<AVoxelWorld> World, FIntVector ChunkCoords)
+    void GenerateChunkDataAsync(TWeakObjectPtr<AVoxelWorld> World, FIntVector ChunkCoords)
     {
-        UE::Tasks::Launch(TEXT("VoxelGen"), [Chunk, World, ChunkCoords]()
+        UE::Tasks::Launch(TEXT("VoxelGen"), [World, ChunkCoords]()
         {
-            if (!Chunk.IsValid() || !World.IsValid()) return;
+            if (!World.IsValid()) return;
 
             const int32 ChunkSize = World->GetWorldGenerationConfig()->ChunkSize;
             const int32 ChunkX = ChunkCoords.X;
@@ -46,25 +45,24 @@ namespace VoxelChunkAsync
                 }
             }
 
-            AsyncTask(ENamedThreads::GameThread, [VoxelData = MoveTemp(VoxelData), Chunk]()
+            AsyncTask(ENamedThreads::GameThread, [VoxelData = MoveTemp(VoxelData), World, ChunkCoords]()
             {
-                if (Chunk.IsValid())
+                if (World.IsValid())
                 {
-                    Chunk->OnChunkDataGenerated(VoxelData);
+                    World->OnChunkDataGenerated(ChunkCoords, VoxelData);
                 }
             });
         });
     }
 
 	void GenerateChunkMeshAsync(
-		TWeakObjectPtr<AVoxelChunk> Chunk,
 		TWeakObjectPtr<AVoxelWorld> World,
 		const TArray<uint16>& VoxelDataCopy,
 		FIntVector ChunkCoords)
 	{
 		UE::Tasks::Launch(TEXT("VoxelMeshTask"), [=]()
 		{
-			if (!Chunk.IsValid() || !World.IsValid())
+			if (!World.IsValid())
 				return;
 			
 			const int ChunkSize = World->GetWorldGenerationConfig()->ChunkSize;
@@ -73,72 +71,76 @@ namespace VoxelChunkAsync
 
 			// +Z (Top)
 			ProcessFace(
-				Chunk, World, MeshSections, VoxelDataCopy,
+				World, MeshSections, VoxelDataCopy,
 				ChunkSize, ChunkSize, ChunkSize,
 				FVector(0, 0, 1),
 				[&](int x, int y, int z) { return GetIndex(x, y, z, ChunkSize); },
-				[&](int x, int y, int z) { return CheckVoxel(Chunk, ChunkCoords, x, y, z + 1); },
+				[&](int x, int y, int z) { return CheckVoxel(World, ChunkCoords, x, y, z + 1); },
 				[](int x, int y, int z) { return FVector(x, y, z); }
 			);
 
 			// -Z (Bottom)
 			ProcessFace(
-				Chunk, World, MeshSections, VoxelDataCopy,
+				World, MeshSections, VoxelDataCopy,
 				ChunkSize, ChunkSize, ChunkSize,
 				FVector(0, 0, -1),
 				[&](int x, int y, int z) { return GetIndex(x, y, z, ChunkSize); },
-				[&](int x, int y, int z) { return CheckVoxel(Chunk, ChunkCoords, x, y, z - 1); },
+				[&](int x, int y, int z) { return CheckVoxel(World, ChunkCoords, x, y, z - 1); },
 				[](int x, int y, int z) { return FVector(x, y, z); }
 			);
 
 			// +Y (Front)
 			ProcessFace(
-				Chunk, World, MeshSections, VoxelDataCopy,
+				World, MeshSections, VoxelDataCopy,
 				ChunkSize, ChunkSize, ChunkSize,
 				FVector(0, 1, 0),
 				[&](int x, int z, int y) { return GetIndex(x, y, z, ChunkSize); },
-				[&](int x, int z, int y) { return CheckVoxel(Chunk, ChunkCoords, x, y + 1, z); },
+				[&](int x, int z, int y) { return CheckVoxel(World, ChunkCoords, x, y + 1, z); },
 				[](int x, int z, int y) { return FVector(x, y, z); }
 			);
 
 			// -Y (Back)
 			ProcessFace(
-				Chunk, World, MeshSections, VoxelDataCopy,
+				World, MeshSections, VoxelDataCopy,
 				ChunkSize, ChunkSize, ChunkSize,
 				FVector(0, -1, 0),
 				[&](int x, int z, int y) { return GetIndex(x, y, z, ChunkSize); },
-				[&](int x, int z, int y) { return CheckVoxel(Chunk, ChunkCoords, x, y - 1, z); },
+				[&](int x, int z, int y) { return CheckVoxel(World, ChunkCoords, x, y - 1, z); },
 				[](int x, int z, int y) { return FVector(x, y, z); }
 			);
 
 			// +X (Right)
 			ProcessFace(
-				Chunk, World, MeshSections, VoxelDataCopy,
+				World, MeshSections, VoxelDataCopy,
 				ChunkSize, ChunkSize, ChunkSize,
 				FVector(1, 0, 0),
 
 				[&](int y, int z, int x) { return GetIndex(x, y, z, ChunkSize); },
-				[&](int y, int z, int x) { return CheckVoxel(Chunk, ChunkCoords, x + 1, y, z); },
+				[&](int y, int z, int x) { return CheckVoxel(World, ChunkCoords, x + 1, y, z); },
 				[](int y, int z, int x) { return FVector(x + 1, y, z); }
 			);
 
 			// -X (Left)
 			ProcessFace(
-				Chunk, World, MeshSections, VoxelDataCopy,
+				World, MeshSections, VoxelDataCopy,
 				ChunkSize, ChunkSize, ChunkSize,
 				FVector(-1, 0, 0),
 				[&](int y, int z, int x) { return GetIndex(x, y, z, ChunkSize); },
-				[&](int y, int z, int x) { return CheckVoxel(Chunk, ChunkCoords, x - 1, y, z); },
+				[&](int y, int z, int x) { return CheckVoxel(World, ChunkCoords, x - 1, y, z); },
 				[](int y, int z, int x) { return FVector(x, y, z); }
 			);
 
 			// Apply result on game thread
-			AsyncTask(ENamedThreads::GameThread, [Chunk, ChunkCoords, MeshSections = MoveTemp(MeshSections)]()
+			AsyncTask(ENamedThreads::GameThread, [World, ChunkCoords, MeshSections = MoveTemp(MeshSections)]()
 			{
-				if (Chunk.IsValid())
+				// if (Chunk.IsValid())
+				// {
+				// 	Chunk->SetChunkCoords(ChunkCoords);
+				// 	Chunk->OnMeshGenerated(MeshSections);
+				// }
+				if (World.IsValid())
 				{
-					Chunk->SetChunkCoords(ChunkCoords);
-					Chunk->OnMeshGenerated(MeshSections);
+					World->OnMeshGenerated(ChunkCoords, MeshSections);
 				}
 			});
 		});
@@ -150,19 +152,18 @@ namespace VoxelChunkAsync
     	return (Z * ChunkSize * ChunkSize) + (Y * ChunkSize) + X;
     }
 
-	bool CheckVoxel(const TWeakObjectPtr<AVoxelChunk>& Chunk, FIntVector ChunkCoords, int X, int Y, int Z)
+	bool CheckVoxel(const TWeakObjectPtr<AVoxelWorld>& World, FIntVector ChunkCoords, int X, int Y, int Z)
     {
-    	return Chunk.IsValid() ? Chunk->CheckVoxel(X, Y, Z, ChunkCoords) : false;
+    	return World.IsValid() ? World->CheckVoxel(X, Y, Z, ChunkCoords) : false;
     }
 
 	void AddMergedFace(
-	const TWeakObjectPtr<AVoxelChunk>& Chunk,
 	const TWeakObjectPtr<AVoxelWorld>& World,
 	FVector Position, FVector Normal, int32 Width, int32 Height,
 	TArray<FVector>& Vertices, TArray<int32>& Triangles,
 	TArray<FVector>& Normals, TArray<FVector2D>& UVs)
     {
-    	if (!Chunk.IsValid() || !World.IsValid()) return;
+    	if (!World.IsValid()) return;
 
     	const int VoxelSize = World->GetWorldGenerationConfig()->VoxelSize;
     	int32 VertexIndex = Vertices.Num();
@@ -246,7 +247,6 @@ namespace VoxelChunkAsync
     }
 
 	void ProcessFace(
-		const TWeakObjectPtr<AVoxelChunk>& Chunk,
 		const TWeakObjectPtr<AVoxelWorld>& World,
 		TMap<FMeshSectionKey, FMeshData>& MeshSections,
 		const TArray<uint16>& VoxelData,
@@ -314,7 +314,7 @@ namespace VoxelChunkAsync
 
     				FMeshSectionKey Key(Mask[A][B].VoxelType, Normal);
     				FMeshData& MeshData = MeshSections.FindOrAdd(Key);
-    				AddMergedFace(Chunk, World, GetVoxelPosition(A, B, P), Normal, Width, Height,
+    				AddMergedFace(World, GetVoxelPosition(A, B, P), Normal, Width, Height,
 						MeshData.Vertices, MeshData.Triangles, MeshData.Normals, MeshData.UVs);
 
 
